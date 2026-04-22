@@ -14,6 +14,7 @@ obj/
 *.cache/
 
 # Unity generated
+client-unity/
 client-unity/Library/
 client-unity/Logs/
 client-unity/Temp/
@@ -24,3 +25,7 @@ client-unity/Build/
 # OS
 .DS_Store
 Thumbs.db
+
+
+# test-server
+test-server/
