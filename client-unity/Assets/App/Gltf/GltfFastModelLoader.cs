@@ -155,18 +155,29 @@ namespace Guidance.Runtime
         //         }
         //     }
         // }
-        private static void PlayAnimationsIfPresent(GLTFast.GltfImport gltf, GameObject root)
+        private static void PlayAnimationsIfPresent(GLTFast.GltfImport gltf, GameObject modelRoot)
         {
-            if (root == null) return;
+            if (modelRoot == null) return;
             try
             {
                 var clips = gltf.GetAnimationClips();
                 if (clips == null || clips.Length == 0) return;
-                var anim = root.GetComponent<Animation>() ?? root.AddComponent<Animation>();
-                foreach (var clip in clips) { clip.legacy = true; anim.AddClip(clip, clip.name); }
+
+                // GLTFast instantiates scene nodes as children of modelRoot.
+                // Clip paths are relative to the GLTFast scene root (first child), not modelRoot.
+                var sceneRoot = modelRoot.transform.childCount > 0
+                    ? modelRoot.transform.GetChild(0).gameObject
+                    : modelRoot;
+
+                var anim = sceneRoot.GetComponent<Animation>() ?? sceneRoot.AddComponent<Animation>();
+                foreach (var clip in clips)
+                {
+                    clip.legacy = true;
+                    anim.AddClip(clip, clip.name);
+                }
                 anim.Rewind(clips[0].name);
                 anim.Play(clips[0].name);
-                Debug.Log($"[GltfFastModelLoader] Playing: {clips[0].name}");
+                Debug.Log($"[GltfFastModelLoader] Playing '{clips[0].name}' on '{sceneRoot.name}'");
             }
             catch (Exception ex)
             {

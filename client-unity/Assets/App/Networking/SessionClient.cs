@@ -20,11 +20,19 @@ namespace Guidance.Runtime
         public SessionClient(bool supportsDraco)
             : this(
                 supportsDraco,
+#if !UNITY_ANDROID
                 new GrpcSessionTransport(
                     target: "localhost:50051",
                     deviceId: SystemInfo.deviceUniqueIdentifier,
                     appVersion: Application.version
                 )
+#else
+                new HttpBridgeSessionTransport(
+                    baseUrl: "http://localhost:8080",
+                    deviceId: SystemInfo.deviceUniqueIdentifier,
+                    appVersion: Application.version
+                )
+#endif
             )
         {
         }
@@ -32,11 +40,19 @@ namespace Guidance.Runtime
         public SessionClient(bool supportsDraco, string target, string deviceId, string appVersion)
             : this(
                 supportsDraco,
+#if !UNITY_ANDROID
                 new GrpcSessionTransport(
                     target: target,
                     deviceId: deviceId,
                     appVersion: appVersion
                 )
+#else
+                new HttpBridgeSessionTransport(
+                    baseUrl: "http://localhost:8080",
+                    deviceId: deviceId,
+                    appVersion: appVersion
+                )
+#endif
             )
         {
         }

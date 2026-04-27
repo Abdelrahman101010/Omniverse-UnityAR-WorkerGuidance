@@ -40,6 +40,11 @@ namespace Guidance.Editor
         private static readonly string[] AllowedSubPaths =
         {
             Path.Combine("Assets", "App", "Tests"),
+            Path.Combine("Assets", "StreamingAssets", "Vuforia"),  // bundled model target
+            Path.Combine("Assets", "Editor", "Vuforia"),           // Vuforia editor authoring
+            Path.Combine("Assets", "NuGet"),                       // NuGet editor plugin
+            Path.Combine("Assets", "Packages"),                    // NuGet package XML docs
+            Path.Combine("Assets", "Plugins"),                     // Android manifest + platform plugins
         };
 
         public void OnPreprocessBuild(BuildReport report)

@@ -14,9 +14,12 @@ namespace Guidance.Runtime
         private GameObject _activeModelRoot;
         private CancellationTokenSource _loadCts;
         private readonly List<IModelLoader> _loaders;
+        private readonly Transform _modelAnchor;   // ← make it private readonly
 
-        public ModelPresenter()
+
+        public ModelPresenter(Transform modelAnchor = null)
         {
+            _modelAnchor = modelAnchor;
             _loaders = new List<IModelLoader>
             {
                 new GltfFastModelLoader(),
@@ -39,13 +42,24 @@ namespace Guidance.Runtime
             }
 
             _activeModelRoot = new GameObject($"Model_{activation.PartId}_{activation.StepId}");
-            var cam = Camera.main;
-            if (cam != null)
+            if (_modelAnchor != null)
             {
-                _activeModelRoot.transform.position = cam.transform.position + cam.transform.forward * 0.5f;
-                _activeModelRoot.transform.rotation = Quaternion.LookRotation(-cam.transform.forward);
-                _activeModelRoot.transform.localScale = Vector3.one * 0.9f; // Omniverse cm → meters
+                _activeModelRoot.transform.SetParent(_modelAnchor, worldPositionStays: false);
+                _activeModelRoot.transform.localPosition = Vector3.zero;
+                _activeModelRoot.transform.localRotation = Quaternion.identity;
+                _activeModelRoot.transform.localScale = Vector3.one;
             }
+            else
+            {
+                // fallback: in front of camera
+                var cam = Camera.main;
+                if (cam != null)
+                {
+                    _activeModelRoot.transform.position = cam.transform.position + cam.transform.forward * 0.5f;
+                    _activeModelRoot.transform.localScale = Vector3.one;
+                }
+            }
+
             IModelLoader selectedLoader = null;
             foreach (var loader in _loaders)
             {
@@ -86,13 +100,24 @@ namespace Guidance.Runtime
             }
 
             _activeModelRoot = new GameObject($"Model_{activation.PartId}_{activation.StepId}");
-            var cam = Camera.main;
-            if (cam != null)
+            if (_modelAnchor != null)
             {
-                _activeModelRoot.transform.position = cam.transform.position + cam.transform.forward * 0.5f;
-                _activeModelRoot.transform.rotation = Quaternion.LookRotation(-cam.transform.forward);
-                _activeModelRoot.transform.localScale = Vector3.one * 0.9f; // Omniverse cm → meters
+                _activeModelRoot.transform.SetParent(_modelAnchor, worldPositionStays: false);
+                _activeModelRoot.transform.localPosition = Vector3.zero;
+                _activeModelRoot.transform.localRotation = Quaternion.identity;
+                _activeModelRoot.transform.localScale = Vector3.one;
             }
+            else
+            {
+                // fallback: in front of camera
+                var cam = Camera.main;
+                if (cam != null)
+                {
+                    _activeModelRoot.transform.position = cam.transform.position + cam.transform.forward * 0.5f;
+                    _activeModelRoot.transform.localScale = Vector3.one;
+                }
+            }
+
 
             IModelLoader selectedLoader = null;
             foreach (var loader in _loaders)

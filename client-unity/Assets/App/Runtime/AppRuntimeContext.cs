@@ -16,7 +16,9 @@ namespace Guidance.Runtime
         public DiagnosticsBundleExporter DiagnosticsExporter { get; }
         public StepAssetManifestClient ManifestClient { get; }
         public ModelPresenter ModelPresenter { get; }
+#if !UNITY_ANDROID
         public GrpcAssetTransferClient GrpcAssetTransfer { get; }
+#endif
 
         public AppRuntimeContext(
             SessionClient sessionClient,
@@ -27,8 +29,11 @@ namespace Guidance.Runtime
             TelemetryClient telemetryClient,
             DiagnosticsBundleExporter diagnosticsExporter,
             StepAssetManifestClient manifestClient,
-            ModelPresenter modelPresenter,
-            GrpcAssetTransferClient grpcAssetTransfer = null)
+            ModelPresenter modelPresenter
+#if !UNITY_ANDROID
+            , GrpcAssetTransferClient grpcAssetTransfer = null
+#endif
+            )
         {
             SessionClient = sessionClient;
             StepCoordinator = stepCoordinator;
@@ -39,33 +44,45 @@ namespace Guidance.Runtime
             DiagnosticsExporter = diagnosticsExporter;
             ManifestClient = manifestClient;
             ModelPresenter = modelPresenter;
+#if !UNITY_ANDROID
             GrpcAssetTransfer = grpcAssetTransfer;
+#endif
         }
 
         /// <summary>
         /// Creates a default runtime graph with either native gRPC or HTTP bridge transport.
         /// </summary>
         public static AppRuntimeContext CreateDefault(
-            bool useNativeGrpcTransport,
-            string grpcTarget,
-            string httpBridgeBaseUrl,
-            bool supportsDraco)
+    bool useNativeGrpcTransport,
+    string grpcTarget,
+    string httpBridgeBaseUrl,
+    bool supportsDraco, Transform modelAnchor = null)
         {
-            ISessionTransport transport = useNativeGrpcTransport
-                ? new GrpcSessionTransport(
+            ISessionTransport transport;
+#if !UNITY_ANDROID
+            if (useNativeGrpcTransport)
+            {
+                transport = new GrpcSessionTransport(
                     target: grpcTarget,
                     deviceId: SystemInfo.deviceUniqueIdentifier,
                     appVersion: Application.version
-                )
-                : new HttpBridgeSessionTransport(
+                );
+            }
+            else
+#endif
+            {
+                transport = new HttpBridgeSessionTransport(
                     baseUrl: httpBridgeBaseUrl,
                     deviceId: SystemInfo.deviceUniqueIdentifier,
                     appVersion: Application.version
                 );
+            }
 
-            var grpcAssetTransfer = useNativeGrpcTransport
+#if !UNITY_ANDROID
+            GrpcAssetTransferClient grpcAssetTransfer = useNativeGrpcTransport
                 ? new GrpcAssetTransferClient(grpcTarget)
                 : null;
+#endif
 
             return new AppRuntimeContext(
                 sessionClient: new SessionClient(supportsDraco: supportsDraco, transport: transport),
@@ -76,9 +93,12 @@ namespace Guidance.Runtime
                 telemetryClient: new TelemetryClient(),
                 diagnosticsExporter: new DiagnosticsBundleExporter(),
                 manifestClient: new StepAssetManifestClient(httpBridgeBaseUrl),
-                modelPresenter: new ModelPresenter(),
-                grpcAssetTransfer: grpcAssetTransfer
+                modelPresenter: new ModelPresenter(modelAnchor)
+#if !UNITY_ANDROID
+                , grpcAssetTransfer: grpcAssetTransfer
+#endif
             );
         }
+
     }
 }

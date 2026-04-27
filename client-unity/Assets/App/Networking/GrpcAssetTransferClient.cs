@@ -1,3 +1,5 @@
+#if !UNITY_ANDROID
+
 using System;
 using System.Collections;
 using System.IO;
@@ -125,3 +127,4 @@ namespace Guidance.Runtime
         }
     }
 }
+#endif

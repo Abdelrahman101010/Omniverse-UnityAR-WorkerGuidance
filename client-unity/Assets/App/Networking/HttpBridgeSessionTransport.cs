@@ -14,6 +14,8 @@ namespace Guidance.Runtime
         private readonly string _deviceId;
         private readonly string _appVersion;
         private string _sessionId = string.Empty;
+        private int _missedHeartbeats;
+        private const int MaxMissedHeartbeats = 3;
 
         public event Action Connected;
         public event Action<StepActivationDto> StepActivated;
@@ -114,11 +116,21 @@ namespace Guidance.Runtime
             {
                 if (request.result != UnityWebRequest.Result.Success)
                 {
-                    Faulted?.Invoke($"Heartbeat failed: {request.error}");
+                    _missedHeartbeats++;
+                    if (_missedHeartbeats >= MaxMissedHeartbeats)
+                    {
+                        IsConnected = false;
+                        Faulted?.Invoke($"Heartbeat failed {_missedHeartbeats}x: {request.error}");
+                    }
+                    else
+                    {
+                        Debug.LogWarning($"[HttpBridgeSessionTransport] Heartbeat missed ({_missedHeartbeats}/{MaxMissedHeartbeats}): {request.error}");
+                    }
                     request.Dispose();
                     return;
                 }
 
+                _missedHeartbeats = 0;
                 ProcessHeartbeatResponse(request.downloadHandler.text, clientTimeUnixMs);
                 request.Dispose();
             };
@@ -196,6 +208,7 @@ namespace Guidance.Runtime
             }
 
             _sessionId = message.hello_response.session_id;
+            _missedHeartbeats = 0;
             IsConnected = true;
             Debug.Log($"[HttpBridgeSessionTransport] Connected baseUrl={_baseUrl} session={_sessionId}");
             Connected?.Invoke();

@@ -25,6 +25,8 @@ namespace Guidance.Runtime
 
         [SerializeField] private SessionStatusPanel statusPanel;
         [SerializeField] private TrackingDirectionHint trackingDirectionHint;
+        [SerializeField] private Transform modelTargetTransform;
+
 
         private AppRuntimeContext _runtime;
         private StepActivationDto _lastActivation;
@@ -49,7 +51,8 @@ namespace Guidance.Runtime
                 useNativeGrpcTransport: useNativeGrpcTransport,
                 grpcTarget: grpcTarget,
                 httpBridgeBaseUrl: httpBridgeBaseUrl,
-                supportsDraco: true
+                supportsDraco: true,
+                modelAnchor: modelTargetTransform
             );
 
             _runtime.StepCoordinator.StateChanged += OnStepStateChanged;
@@ -396,6 +399,7 @@ namespace Guidance.Runtime
             string targetPayloadPath = null;
             string targetPayloadError = null;
 
+#if !UNITY_ANDROID
             if (_runtime.GrpcAssetTransfer != null && !string.IsNullOrEmpty(resolved.TargetVersion))
             {
                 var targetOutputPath = _runtime.TargetPayloadCache.GetCachePath(resolved.TargetVersion, targetFileName);
@@ -416,6 +420,7 @@ namespace Guidance.Runtime
                 }
             }
             else
+#endif
             {
                 yield return _runtime.TargetPayloadCache.GetOrDownloadFile(
                     resolved.TargetUrl,
