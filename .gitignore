@@ -22,6 +22,20 @@ client-unity/Build/
 client-unity/Builds/
 client-unity/UserSettings/
 client-unity/*.pidb
+client-unity/.utmp/
+client-unity/*_BurstDebugInformation_DoNotShip/
+client-unity/il2cpp_cache/
+client-unity/Assets/Resources/PerformanceTestRunInfo.json
+client-unity/Assets/Resources/PerformanceTestRunSettings.json
+
+# Android build outputs
+*.apk
+*.aab
+
+# Unity auto-generated IDE project files
+*.sln
+*.csproj
+*.unityproj
 
 # Vuforia engine package (too large for GitHub)
 client-unity/Assets/Editor/Migration/
