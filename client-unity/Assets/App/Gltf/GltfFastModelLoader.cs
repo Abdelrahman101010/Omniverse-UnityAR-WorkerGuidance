@@ -161,23 +161,28 @@ namespace Guidance.Runtime
             try
             {
                 var clips = gltf.GetAnimationClips();
-                if (clips == null || clips.Length == 0) return;
+                if (clips == null || clips.Length == 0)
+                {
+                    Debug.Log("[GltfFastModelLoader] No animation clips found in GLB.");
+                    return;
+                }
 
-                // GLTFast instantiates scene nodes as children of modelRoot.
-                // Clip paths are relative to the GLTFast scene root (first child), not modelRoot.
-                var sceneRoot = modelRoot.transform.childCount > 0
-                    ? modelRoot.transform.GetChild(0).gameObject
-                    : modelRoot;
+                // GLTFast clip paths include the scene root name, so they resolve
+                // correctly when the Animation component is on the container (modelRoot).
+                var anim = modelRoot.GetComponent<Animation>() ?? modelRoot.AddComponent<Animation>();
+                anim.playAutomatically = false;
 
-                var anim = sceneRoot.GetComponent<Animation>() ?? sceneRoot.AddComponent<Animation>();
                 foreach (var clip in clips)
                 {
                     clip.legacy = true;
+                    clip.wrapMode = WrapMode.Loop;
                     anim.AddClip(clip, clip.name);
                 }
-                anim.Rewind(clips[0].name);
+
+                anim.wrapMode = WrapMode.Loop;
+                anim.clip = clips[0];
                 anim.Play(clips[0].name);
-                Debug.Log($"[GltfFastModelLoader] Playing '{clips[0].name}' on '{sceneRoot.name}'");
+                Debug.Log($"[GltfFastModelLoader] Playing '{clips[0].name}' looping on '{modelRoot.name}' ({clips.Length} clip(s) total)");
             }
             catch (Exception ex)
             {

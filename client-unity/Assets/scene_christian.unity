@@ -152,7 +152,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   visible: 1
   showControls: 1
-  appBootstrap: {fileID: 0}
+  appBootstrap: {fileID: 215422350}
 --- !u!114 &215422350
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -167,7 +167,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   useNativeGrpcTransport: 0
   grpcTarget: localhost:50051
-  httpBridgeBaseUrl: http://141.43.110.191:8000
+  httpBridgeBaseUrl: http://141.43.107.233:8000
   enableRuntimeAssetPipeline: 1
   autoConfirmStepAfterAssetReady: 0
   autoConfirmDelaySeconds: 0.5
@@ -177,7 +177,7 @@ MonoBehaviour:
   reconnectBackoffMultiplier: 1.8
   statusPanel: {fileID: 215422349}
   trackingDirectionHint: {fileID: 215422351}
-  modelTargetTransform: {fileID: 0}
+  modelTargetTransform: {fileID: 461632069}
 --- !u!114 &215422351
 MonoBehaviour:
   m_ObjectHideFlags: 0

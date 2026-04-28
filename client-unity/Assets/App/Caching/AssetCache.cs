@@ -40,18 +40,21 @@ namespace Guidance.Runtime
                 yield break;
             }
 
+            Debug.Log($"[AssetCache] Downloading {fileName} from {url}");
             using var request = UnityWebRequest.Get(url);
+            request.timeout = 180;
             yield return request.SendWebRequest();
 
             if (request.result != UnityWebRequest.Result.Success)
             {
-                onError?.Invoke($"Asset download failed: {request.error}");
+                onError?.Invoke($"Asset download failed [{request.responseCode}] {request.error} — url={url}");
                 yield break;
             }
 
             var outputPath = GetAssetPath(assetVersion, fileName);
             Directory.CreateDirectory(Path.GetDirectoryName(outputPath) ?? _cacheRoot);
             File.WriteAllBytes(outputPath, request.downloadHandler.data);
+            Debug.Log($"[AssetCache] Cached {fileName} ({request.downloadHandler.data.Length / 1024}KB) → {outputPath}");
             onReady?.Invoke(outputPath);
         }
 
