@@ -67,6 +67,48 @@ namespace Guidance.Runtime
             onReady?.Invoke(outputPath);
         }
 
+        /// <summary>
+        /// Downloads both the .dat and the paired .xml in one call.
+        /// onReady receives (xmlPath, datPath). Either may be empty if the URL was empty.
+        /// </summary>
+        public IEnumerator GetOrDownloadTargetPair(
+            string datUrl,
+            string targetVersion,
+            string datFileName,
+            Action<string, string> onReady,
+            Action<string> onError)
+        {
+            string datPath = null;
+            string datError = null;
+            yield return GetOrDownloadFile(datUrl, targetVersion, datFileName,
+                onReady: p => datPath = p,
+                onError: e => datError = e);
+
+            if (!string.IsNullOrEmpty(datError))
+            {
+                onError?.Invoke(datError);
+                yield break;
+            }
+
+            string xmlPath = null;
+            string xmlError = null;
+            if (!string.IsNullOrEmpty(datUrl))
+            {
+                var xmlUrl = datUrl.Length > 4
+                    ? datUrl.Substring(0, datUrl.Length - 4) + ".xml"
+                    : string.Empty;
+                var xmlFileName = Path.ChangeExtension(datFileName, ".xml");
+                yield return GetOrDownloadFile(xmlUrl, targetVersion, xmlFileName,
+                    onReady: p => xmlPath = p,
+                    onError: e => xmlError = e);
+
+                if (!string.IsNullOrEmpty(xmlError))
+                    Debug.LogWarning($"[TargetPayloadCache] XML download failed: {xmlError}");
+            }
+
+            onReady?.Invoke(xmlPath ?? string.Empty, datPath ?? string.Empty);
+        }
+
         private string GetTargetPath(string targetVersion, string fileName)
         {
             var safeVersion = (targetVersion ?? "unknown").Replace(":", "_");

@@ -6,76 +6,49 @@ using Vuforia;
 
 namespace Guidance.Runtime
 {
-    /// <summary>
-    /// Bridges Vuforia observer status events into runtime tracking callbacks.
-    /// </summary>
     public sealed class VuforiaTrackingBridge : MonoBehaviour
     {
         [SerializeField] private AppBootstrap appBootstrap;
 
 #if VUFORIA_ENGINE
-        [SerializeField] private ObserverBehaviour observerBehaviour;
-#endif
+        private ObserverBehaviour _observerBehaviour;
 
         private void Awake()
         {
             if (appBootstrap == null)
-            {
                 appBootstrap = FindFirstObjectByType<AppBootstrap>();
-            }
-        }
-
-#if VUFORIA_ENGINE
-        private void OnEnable()
-        {
-            if (observerBehaviour != null)
-            {
-                observerBehaviour.OnTargetStatusChanged += HandleTargetStatusChanged;
-            }
         }
 
         private void OnDisable()
         {
-            if (observerBehaviour != null)
-            {
-                observerBehaviour.OnTargetStatusChanged -= HandleTargetStatusChanged;
-            }
+            if (_observerBehaviour != null)
+                _observerBehaviour.OnTargetStatusChanged -= HandleTargetStatusChanged;
+        }
+
+        public void AssignObserver(ObserverBehaviour newObserver)
+        {
+            if (_observerBehaviour == newObserver) return;
+            if (_observerBehaviour != null)
+                _observerBehaviour.OnTargetStatusChanged -= HandleTargetStatusChanged;
+            _observerBehaviour = newObserver;
+            if (_observerBehaviour != null && isActiveAndEnabled)
+                _observerBehaviour.OnTargetStatusChanged += HandleTargetStatusChanged;
         }
 
         private void HandleTargetStatusChanged(ObserverBehaviour behaviour, TargetStatus status)
         {
-            if (appBootstrap == null)
-            {
-                return;
-            }
-
-            var trackingAcquired =
-                status.Status == Status.TRACKED
-                || status.Status == Status.EXTENDED_TRACKED
-                || status.Status == Status.LIMITED;
-
-            var poseTransform = behaviour != null ? behaviour.transform : transform;
-            appBootstrap.OnTargetTrackingUpdated(
-                poseTransform.position,
-                poseTransform.rotation,
-                trackingAcquired
-            );
+            if (appBootstrap == null) return;
+            var tracked = status.Status == Status.TRACKED
+                       || status.Status == Status.EXTENDED_TRACKED
+                       || status.Status == Status.LIMITED;
+            var pose = behaviour != null ? behaviour.transform : transform;
+            appBootstrap.OnTargetTrackingUpdated(pose.position, pose.rotation, tracked);
         }
 #else
-        // Editor/test fallback when Vuforia package is not installed.
-        public void InjectTrackingSample(Transform observedPose, bool trackingAcquired)
+        private void Awake()
         {
             if (appBootstrap == null)
-            {
-                return;
-            }
-
-            var poseTransform = observedPose != null ? observedPose : transform;
-            appBootstrap.OnTargetTrackingUpdated(
-                poseTransform.position,
-                poseTransform.rotation,
-                trackingAcquired
-            );
+                appBootstrap = FindFirstObjectByType<AppBootstrap>();
         }
 #endif
     }

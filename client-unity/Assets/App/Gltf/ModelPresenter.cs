@@ -14,7 +14,7 @@ namespace Guidance.Runtime
         private GameObject _activeModelRoot;
         private CancellationTokenSource _loadCts;
         private readonly List<IModelLoader> _loaders;
-        private readonly Transform _modelAnchor;   // ← make it private readonly
+        private Transform _modelAnchor;
 
 
         public ModelPresenter(Transform modelAnchor = null)
@@ -150,6 +150,20 @@ namespace Guidance.Runtime
         public bool HasAnimation =>
             _activeModelRoot != null &&
             _activeModelRoot.GetComponentInChildren<Animation>() != null;
+
+        /// <summary>
+        /// Switches the anchor at runtime (e.g. when a dynamically loaded Vuforia observer
+        /// becomes available). Re-parents any already-displayed model immediately.
+        /// </summary>
+        public void SetAnchor(Transform newAnchor)
+        {
+            _modelAnchor = newAnchor;
+            if (_activeModelRoot == null || newAnchor == null) return;
+            _activeModelRoot.transform.SetParent(newAnchor, worldPositionStays: false);
+            _activeModelRoot.transform.localPosition = Vector3.zero;
+            _activeModelRoot.transform.localRotation = Quaternion.identity;
+            _activeModelRoot.transform.localScale = Vector3.one;
+        }
 
         public void ClearActiveModel()
         {

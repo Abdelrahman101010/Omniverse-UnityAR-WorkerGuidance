@@ -671,7 +671,8 @@ PlayerSettings:
   webGLWebAssemblyBigInt: 0
   webGLCloseOnQuit: 0
   webWasm2023: 0
-  scriptingDefineSymbols: {}
+  scriptingDefineSymbols:
+    Android: VUFORIA_ENGINE
   additionalCompilerArguments: {}
   platformArchitecture: {}
   scriptingBackend: {}

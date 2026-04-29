@@ -5,7 +5,9 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Collections.Generic;
+#if VUFORIA_ENGINE
 using Vuforia;
+#endif
 namespace Guidance.Runtime
 {
     /// <summary>
@@ -27,6 +29,7 @@ namespace Guidance.Runtime
         [SerializeField] private SessionStatusPanel statusPanel;
         [SerializeField] private TrackingDirectionHint trackingDirectionHint;
         [SerializeField] private Transform modelTargetTransform;
+        [SerializeField] private VuforiaTrackingBridge vuforiaTrackingBridge;
 
 
         private AppRuntimeContext _runtime;
@@ -55,6 +58,9 @@ namespace Guidance.Runtime
                 supportsDraco: true,
                 modelAnchor: modelTargetTransform
             );
+
+            if (vuforiaTrackingBridge == null)
+                vuforiaTrackingBridge = FindFirstObjectByType<VuforiaTrackingBridge>();
 
             _runtime.StepCoordinator.StateChanged += OnStepStateChanged;
             _runtime.SessionClient.StepActivated += OnSessionStepActivated;
@@ -372,11 +378,11 @@ namespace Guidance.Runtime
             if (glbCached)
             {
                 _runtime.TelemetryClient.TrackAssetCacheHit(resolved.AssetVersion, fileName);
-                statusPanel?.SetPipelineStatus("GLB: loading from cache...");
+                statusPanel?.SetPipelineStatus("loading from cache...");
             }
             else
             {
-                statusPanel?.SetPipelineStatus("GLB: downloading from server...");
+                statusPanel?.SetPipelineStatus("downloading from server...");
             }
 
             string modelPath = null;
@@ -404,107 +410,54 @@ namespace Guidance.Runtime
 
             var targetFileName = ExtractFileName(resolved.TargetUrl, activation.StepId, defaultExtension: "dat");
             string targetPayloadPath = null;
+            string targetXmlPath = null;
             string targetPayloadError = null;
 
             var targetCached = _runtime.TargetPayloadCache.TryGetCachedFile(resolved.TargetVersion, targetFileName, out _);
-            statusPanel?.SetPipelineStatus(targetCached ? "Target: loading from cache..." : "Target: downloading from server...");
+            statusPanel?.SetTargetStatus(targetCached ? "loading from cache..." : "downloading from server...");
 
-#if !UNITY_ANDROID
-            if (_runtime.GrpcAssetTransfer != null && !string.IsNullOrEmpty(resolved.TargetVersion))
-            {
-                var targetOutputPath = _runtime.TargetPayloadCache.GetCachePath(resolved.TargetVersion, targetFileName);
-                if (!_runtime.TargetPayloadCache.TryGetCachedFile(resolved.TargetVersion, targetFileName, out _))
-                {
-                    yield return _runtime.GrpcAssetTransfer.StreamTargetAsync(
-                        activation.JobId,
-                        activation.StepId,
-                        resolved.TargetVersion,
-                        targetOutputPath,
-                        onReady: path => targetPayloadPath = path,
-                        onError: error => targetPayloadError = error
-                    );
-                }
-                else
-                {
-                    targetPayloadPath = targetOutputPath;
-                }
-            }
-            else
-#endif
-            {
-                yield return _runtime.TargetPayloadCache.GetOrDownloadFile(
-                    resolved.TargetUrl,
-                    resolved.TargetVersion,
-                    targetFileName,
-                    onReady: path => targetPayloadPath = path,
-                    onError: error => targetPayloadError = error
-                );
-            }
-            // Download the paired .xml — Vuforia requires both .dat and .xml in the same folder
-            if (!string.IsNullOrEmpty(targetPayloadPath))
-            {
-                var xmlFileName = Path.ChangeExtension(targetFileName, ".xml");
-                var xmlUrl = resolved.TargetUrl.Length > 4
-                    ? resolved.TargetUrl.Substring(0, resolved.TargetUrl.Length - 4) + ".xml"
-                    : string.Empty;
-                string xmlError = null;
-                yield return _runtime.TargetPayloadCache.GetOrDownloadFile(
-                    xmlUrl, resolved.TargetVersion, xmlFileName,
-                    onReady: _ => { },
-                    onError: err => xmlError = err
-                );
-                if (!string.IsNullOrEmpty(xmlError))
-                {
-                    Debug.LogWarning($"[AppBootstrap] XML download failed: {xmlError}");
-                    statusPanel?.SetPipelineStatus("Target: .dat ok, .xml FAILED");
-                }
-                else
-                {
-                    statusPanel?.SetPipelineStatus(targetCached ? "Target: ready (cache)" : "Target: ready (server)");
-                }
-            }
+            yield return _runtime.TargetPayloadCache.GetOrDownloadTargetPair(
+                resolved.TargetUrl,
+                resolved.TargetVersion,
+                targetFileName,
+                onReady: (xml, dat) => { targetXmlPath = xml; targetPayloadPath = dat; },
+                onError: error => targetPayloadError = error
+            );
 
             if (!string.IsNullOrEmpty(targetPayloadError))
             {
                 _runtime.TelemetryClient.TrackFault("TARGET_DOWNLOAD", targetPayloadError);
                 _runtime.StepCoordinator.RegisterFault(targetPayloadError);
-                if (statusPanel != null)
-                {
-                    statusPanel.SetWarning(targetPayloadError);
-                }
+                statusPanel?.SetWarning(targetPayloadError);
                 yield break;
             }
 
+            statusPanel?.SetTargetStatus(targetCached ? "ready (from cache)" : "ready (from server)");
             _runtime.TargetManager.ActivateTarget(activation.TargetId, resolved.TargetVersion, targetPayloadPath);
-            // Gets the model target andn its files from the local state.
-            // loading into Vuforia at runtime
+
 #if VUFORIA_ENGINE
             if (!string.IsNullOrEmpty(targetPayloadPath))
             {
-                statusPanel?.SetPipelineStatus("Target: loading into Vuforia...");
+                statusPanel?.SetTargetStatus("loading into Vuforia...");
                 yield return VuforiaModelTargetLoader.LoadModelTargetDatabaseAsync(
                     targetPayloadPath,
+                    targetNameFallback: activation.TargetId,
                     onLoaded: observer =>
                     {
                         if (observer != null)
                         {
-                            statusPanel?.SetPipelineStatus("Target: active in Vuforia");
-                            observer.OnTargetStatusChanged += (obs, data) =>
-                                OnTargetTrackingUpdated(
-                                    obs.transform.position,
-                                    obs.transform.rotation,
-                                    data.Status == Vuforia.Status.TRACKED ||
-                                    data.Status == Vuforia.Status.EXTENDED_TRACKED
-                                );
+                            statusPanel?.SetTargetStatus("ACTIVE in Vuforia (from FastAPI)");
+                            _runtime.ModelPresenter.SetAnchor(observer.transform);
+                            vuforiaTrackingBridge?.AssignObserver(observer);
                         }
                         else
                         {
-                            statusPanel?.SetPipelineStatus("Target: Vuforia returned null observer");
+                            statusPanel?.SetTargetStatus("ERROR: Vuforia returned null observer");
                         }
                     },
                     onError: err =>
                     {
-                        statusPanel?.SetPipelineStatus($"Target: Vuforia ERROR");
+                        statusPanel?.SetTargetStatus($"ERROR: {err}");
                         Debug.LogWarning($"[AppBootstrap] Vuforia load failed: {err}");
                     }
                 );
@@ -529,8 +482,8 @@ namespace Guidance.Runtime
                 yield break;
             }
             _lastModelPath = modelPath ?? string.Empty;
-            var animStatus = _runtime.ModelPresenter.HasAnimation ? "animating" : "static (no clips)";
-            statusPanel?.SetPipelineStatus($"GLB: ready — {animStatus}");
+            var animStatus = _runtime.ModelPresenter.HasAnimation ? "ready — animating" : "ready — static (no clips)";
+            statusPanel?.SetPipelineStatus(animStatus);
             _lastTargetPayloadPath = targetPayloadPath ?? string.Empty;
             _lastTargetVersion = resolved.TargetVersion ?? string.Empty;
 

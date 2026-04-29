@@ -19,7 +19,7 @@ namespace Guidance.Runtime
         private string _warning = string.Empty;
 
         private string _pipelineStatus = string.Empty;
-
+        private string _targetStatus = string.Empty;
 
         private void Awake()
         {
@@ -59,6 +59,11 @@ namespace Guidance.Runtime
             _pipelineStatus = status ?? string.Empty;
         }
 
+        public void SetTargetStatus(string status)
+        {
+            _targetStatus = status ?? string.Empty;
+        }
+
         private void OnGUI()
         {
             if (!visible)
@@ -66,7 +71,7 @@ namespace Guidance.Runtime
                 return;
             }
 
-            GUILayout.BeginArea(new Rect(16, 16, 520, 220), GUI.skin.box);
+            GUILayout.BeginArea(new Rect(16, 16, 520, 245), GUI.skin.box);
             GUILayout.Label("Guidance Runtime Status");
             GUILayout.Label($"Connection: {_connectionState}");
             GUILayout.Label($"Step State: {_stepState}");
@@ -80,7 +85,11 @@ namespace Guidance.Runtime
             }
             if (!string.IsNullOrEmpty(_pipelineStatus))
             {
-                GUILayout.Label($"Pipeline: {_pipelineStatus}");
+                GUILayout.Label($"GLB: {_pipelineStatus}");
+            }
+            if (!string.IsNullOrEmpty(_targetStatus))
+            {
+                GUILayout.Label($"Target: {_targetStatus}");
             }
 
             if (showControls && appBootstrap != null)

@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using System.IO;
 using UnityEngine;
 
 #if VUFORIA_ENGINE
@@ -9,28 +10,16 @@ using Vuforia;
 namespace Guidance.Runtime
 {
     /// <summary>
-    /// Loads a Vuforia Model Target database that was downloaded at runtime from the server.
-    /// The database files (<c>.dat</c> / <c>.xml</c>) are never bundled in the app; they are
-    /// fetched from the guidance server and stored in <c>Application.persistentDataPath</c>.
-    ///
-    /// Uses a coroutine so that Vuforia API calls happen on the Unity main thread
-    /// without dropping frames.
+    /// Loads a Vuforia Model Target database downloaded at runtime from the FastAPI server.
+    /// Uses VuforiaBehaviour.Instance.ObserverFactory.CreateModelTarget — the official
+    /// Vuforia Engine 11 API for runtime dataset loading (replaces the removed ObjectTracker/DataSet API).
     /// </summary>
     public static class VuforiaModelTargetLoader
     {
 #if VUFORIA_ENGINE
-        /// <summary>
-        /// Coroutine that activates a Vuforia Model Target dataset from a downloaded .dat file path.
-        /// </summary>
-        /// <param name="datFilePath">
-        /// Absolute path to the <c>.dat</c> file. The paired <c>.xml</c> must exist alongside it.
-        /// </param>
-        /// <param name="onLoaded">
-        /// Called with the activated <see cref="ObserverBehaviour"/> on success.
-        /// </param>
-        /// <param name="onError">Called with an error description on failure.</param>
         public static IEnumerator LoadModelTargetDatabaseAsync(
             string datFilePath,
+            string targetNameFallback,
             Action<ObserverBehaviour> onLoaded,
             Action<string> onError)
         {
@@ -40,85 +29,117 @@ namespace Guidance.Runtime
                 yield break;
             }
 
-            ObjectTracker objectTracker = null;
-            DataSet dataSet = null;
+            var xmlPath = Path.ChangeExtension(datFilePath, ".xml");
+            var datPath = Path.ChangeExtension(datFilePath, ".dat");
 
-            // Retrieve the ObjectTracker on the main thread
-            objectTracker = TrackerManager.Instance.GetTracker<ObjectTracker>();
-            if (objectTracker == null)
+            if (!File.Exists(xmlPath) || !File.Exists(datPath))
             {
-                onError?.Invoke("VuforiaModelTargetLoader: ObjectTracker is not available");
+                onError?.Invoke(
+                    $"VuforiaModelTargetLoader: files missing — " +
+                    $"xml={File.Exists(xmlPath)} dat={File.Exists(datPath)} ({xmlPath})");
                 yield break;
             }
 
-            objectTracker.Stop();
+            var exactTargetName = ExtractTargetNameFromXml(xmlPath, targetNameFallback);
 
-            // CreateDataSet and ActivateDataSet must run on the main thread
-            dataSet = objectTracker.CreateDataSet();
-            if (dataSet == null)
+            bool done = false;
+            string capturedError = null;
+            ObserverBehaviour capturedObserver = null;
+
+            void TryCreate()
             {
-                onError?.Invoke("VuforiaModelTargetLoader: Failed to create DataSet");
-                objectTracker.Start();
-                yield break;
-            }
-
-            bool loaded = dataSet.Load(datFilePath, VuforiaUnity.StorageType.STORAGE_ABSOLUTE);
-            if (!loaded)
-            {
-                onError?.Invoke($"VuforiaModelTargetLoader: DataSet.Load failed for {datFilePath}");
-                objectTracker.Start();
-                yield break;
-            }
-
-            bool activated = objectTracker.ActivateDataSet(dataSet);
-            if (!activated)
-            {
-                onError?.Invoke("VuforiaModelTargetLoader: ActivateDataSet failed");
-                objectTracker.Start();
-                yield break;
-            }
-
-            objectTracker.Start();
-
-            // Allow Vuforia one frame to register the observers
-            yield return null;
-
-            ObserverBehaviour observer = null;
-            foreach (var trackable in dataSet.GetTrackables<TrackableBehaviour>())
-            {
-                observer = trackable as ObserverBehaviour;
-                if (observer != null)
+                // If a ModelTargetBehaviour already exists in the scene (e.g. the static
+                // StreamingAssets one), reuse it — Vuforia throws if you try to create a
+                // second observer for the same database name.
+                var existing = UnityEngine.Object.FindFirstObjectByType<ModelTargetBehaviour>();
+                if (existing != null)
                 {
-                    break;
+                    Debug.Log($"[VuforiaModelTargetLoader] Reusing existing scene observer '{existing.TargetName}'");
+                    capturedObserver = existing;
+                    done = true;
+                    return;
+                }
+
+                try
+                {
+                    var modelTarget = VuforiaBehaviour.Instance.ObserverFactory
+                        .CreateModelTarget(xmlPath, exactTargetName);
+                    if (modelTarget != null)
+                    {
+                        Debug.Log($"[VuforiaModelTargetLoader] Runtime target created: '{modelTarget.TargetName}' from {xmlPath}");
+                        capturedObserver = modelTarget;
+                    }
+                    else
+                    {
+                        capturedError = $"VuforiaModelTargetLoader: CreateModelTarget returned null for '{exactTargetName}'";
+                    }
+                }
+                catch (Exception ex)
+                {
+                    capturedError = $"VuforiaModelTargetLoader: {ex.Message}";
+                }
+                done = true;
+            }
+
+            if (VuforiaApplication.Instance.IsInitialized)
+            {
+                TryCreate();
+            }
+            else
+            {
+                VuforiaApplication.Instance.OnVuforiaStarted += TryCreate;
+
+                float waited = 0f;
+                while (!done && waited < 10f)
+                {
+                    yield return null;
+                    waited += Time.deltaTime;
+                }
+
+                VuforiaApplication.Instance.OnVuforiaStarted -= TryCreate;
+
+                if (!done)
+                {
+                    onError?.Invoke("VuforiaModelTargetLoader: timed out waiting for Vuforia (10s)");
+                    yield break;
                 }
             }
 
-            if (observer == null)
-            {
-                onError?.Invoke("VuforiaModelTargetLoader: No ObserverBehaviour found after activation");
-                yield break;
-            }
+            if (capturedError != null)
+                onError?.Invoke(capturedError);
+            else
+                onLoaded?.Invoke(capturedObserver);
+        }
 
-            Debug.Log($"[VuforiaModelTargetLoader] Loaded runtime target from {datFilePath}");
-            onLoaded?.Invoke(observer);
+        private static string ExtractTargetNameFromXml(string xmlPath, string fallback)
+        {
+            try
+            {
+                var content = File.ReadAllText(xmlPath);
+                const string tag = "<ModelTarget name=\"";
+                int start = content.IndexOf(tag, StringComparison.Ordinal);
+                if (start >= 0)
+                {
+                    start += tag.Length;
+                    int end = content.IndexOf('"', start);
+                    if (end > start) return content.Substring(start, end - start);
+                }
+            }
+            catch { }
+            return fallback;
         }
 
 #else
-
-        /// <summary>
-        /// No-op fallback used when Vuforia Engine is not present in the project.
-        /// Logs a warning and immediately calls <paramref name="onLoaded"/> with null.
-        /// </summary>
         public static IEnumerator LoadModelTargetDatabaseAsync(
             string datFilePath,
+            string targetNameFallback,
             Action<UnityEngine.Object> onLoaded,
             Action<string> onError)
         {
-            Debug.LogWarning("[VuforiaModelTargetLoader] Vuforia Engine is not available — target loading skipped.");
+            Debug.LogWarning("[VuforiaModelTargetLoader] VUFORIA_ENGINE not defined — skipped.");
             onLoaded?.Invoke(null);
             yield break;
         }
-
 #endif
     }
 }
