@@ -147,6 +147,10 @@ namespace Guidance.Runtime
             }
         }
 
+        public bool HasAnimation =>
+            _activeModelRoot != null &&
+            _activeModelRoot.GetComponentInChildren<Animation>() != null;
+
         public void ClearActiveModel()
         {
             _loadCts?.Cancel();
