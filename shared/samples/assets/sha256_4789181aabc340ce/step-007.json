@@ -1,0 +1,17 @@
+{
+  "stepId": "step-007",
+  "partId": "frame_ring_03_multi",
+  "displayName": "TestFrameRing03_003-005-006-007-010-011",
+  "sequenceIndex": 7,
+  "instructionsShort": "Place Part_TestFrameRing03_003-005-006-007-010-011",
+  "safetyNotes": [],
+  "expectedDurationSec": 30,
+  "anchor": {
+    "type": "model-target",
+    "targetId": "Fixture_detectors_1_model_target",
+    "targetVersion": "v1.0.0"
+  },
+  "assetVersion": "sha256_4789181aabc340ce",
+  "compression": "NONE",
+  "glbFile": "part_frame_ring_03_multi_4789181a.glb"
+}

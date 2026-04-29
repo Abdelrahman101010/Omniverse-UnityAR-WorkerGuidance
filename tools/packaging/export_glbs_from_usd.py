@@ -28,7 +28,7 @@ from typing import Any
 
 # --- CONFIGURATION ---------------------------------------------------------
 
-JOB_ID = "demonstrator-26-02-25"
+JOB_ID = "Fixture_detectors_1-26-02-25"
 NUCLEUS_BASE = "omniverse://141.43.76.21/Projects/DIREKT/Omniverse%20Tests/Animation%20Februar%2025"
 REPO_ROOT = Path(r"D:\Users\Abdul\Omniverse-UnityAR-WorkerGuidance\Omniverse-UnityAR-WorkerGuidance")
 

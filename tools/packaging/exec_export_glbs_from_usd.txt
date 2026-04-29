@@ -1,0 +1,4 @@
+open Omniverse -> desired USD file
+Open Script Editor
+execute this:
+exec(open(r"D:\Users\Abdul\Omniverse-UnityAR-WorkerGuidance\Omniverse-UnityAR-WorkerGuidance\tools\packaging\export_glbs_from_usd.py").read())

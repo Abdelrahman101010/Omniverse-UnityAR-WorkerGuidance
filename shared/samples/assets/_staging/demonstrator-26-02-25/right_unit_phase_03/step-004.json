@@ -1,0 +1,14 @@
+{
+  "stepId": "step-004",
+  "partId": "right_unit_phase_03",
+  "displayName": "RIGHT_UNIT_PHASE_03_001",
+  "sequenceIndex": 4,
+  "instructionsShort": "Place Part_RIGHT_UNIT_PHASE_03_001",
+  "safetyNotes": [],
+  "expectedDurationSec": 30,
+  "anchor": {
+    "type": "model-target",
+    "targetId": "Fixture_detectors_1_model_target",
+    "targetVersion": "v1.0.0"
+  }
+}

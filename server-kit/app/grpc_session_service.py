@@ -73,6 +73,14 @@ class GuidanceSessionService(guidance_pb2_grpc.GuidanceSessionServiceServicer):
                     continue
 
                 device_id = message.hello.device_id or "unknown-device"
+                requested_job_id = self._parse_desired_job(message.hello.capabilities)
+                if requested_job_id:
+                    active_job_id = requested_job_id
+                    self._logger.info(
+                        f"client requested job={requested_job_id}",
+                        session_id="-",
+                        step_id="-",
+                    )
                 session_id, resumed = self._session_manager.register_or_resume_session(device_id)
                 self._set_session_state_with_log(session_id, SessionState.IDLE, reason="hello")
                 handshake_done = True
@@ -162,6 +170,21 @@ class GuidanceSessionService(guidance_pb2_grpc.GuidanceSessionServiceServicer):
                 )
 
         self._logger.info("session stream closed", session_id=session_id or "-", step_id="-")
+
+    @staticmethod
+    def _parse_desired_job(capabilities: str) -> str:
+        """Extract a 'job=<id>' token from the capabilities string sent by clients.
+
+        Capabilities is a comma-separated list (e.g. ``unity-ar,job=Fixture_detectors_1-26-02-25``).
+        Returns the job id if present, otherwise an empty string.
+        """
+        if not capabilities:
+            return ""
+        for token in capabilities.split(","):
+            token = token.strip()
+            if token.startswith("job="):
+                return token[len("job="):].strip()
+        return ""
 
     def _get_steps(self, job_id: str) -> list[StepDefinition]:
         if self._step_repository is None:

@@ -10,7 +10,7 @@ Runs AFTER `export_glbs_from_usd.py` has produced per-part GLBs. This script:
   6. Verifies Vuforia Model Target files are in place under shared/samples/targets
 
 Run from the repo root with venv active:
-    python tools\\packaging\\automate_job.py --job-id demonstrator-26-02-25
+    python tools\\packaging\\automate_job.py --job-id Fixture_detectors_1-26-02-25
 """
 
 from __future__ import annotations
@@ -41,10 +41,10 @@ class TargetSpec:
 #   shared/samples/targets/<target_version>/<dat_filename>
 # The Unity client loads both before starting the session.
 DEFAULT_TARGET = TargetSpec(
-    target_id="demonstrator_model_target",
+    target_id="Fixture_detectors_1_model_target",
     target_version="v1.0.0",
-    xml_filename="demonstrator.xml",
-    dat_filename="demonstrator.dat",
+    xml_filename="Fixture_detectors_1.xml",
+    dat_filename="Fixture_detectors_1.dat",
 )
 
 WORKFLOW_VERSION = "1.0.0"

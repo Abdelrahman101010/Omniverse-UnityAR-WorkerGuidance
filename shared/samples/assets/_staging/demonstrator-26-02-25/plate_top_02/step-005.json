@@ -1,0 +1,14 @@
+{
+  "stepId": "step-005",
+  "partId": "plate_top_02",
+  "displayName": "PLATE_TOP_02_002",
+  "sequenceIndex": 5,
+  "instructionsShort": "Place Part_PLATE_TOP_02_002",
+  "safetyNotes": [],
+  "expectedDurationSec": 30,
+  "anchor": {
+    "type": "model-target",
+    "targetId": "Fixture_detectors_1_model_target",
+    "targetVersion": "v1.0.0"
+  }
+}
