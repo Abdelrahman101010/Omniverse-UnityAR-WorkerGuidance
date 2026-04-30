@@ -10,7 +10,7 @@ from fastapi.responses import FileResponse
 from fastapi.responses import JSONResponse
 from fastapi import status
 from pathlib import Path
-from fastapi import WebSocket, WebSocketDisconnect
+# from fastapi import WebSocket, WebSocketDisconnect  # re-enable with the WS route below
 from fastapi.responses import FileResponse
 from app.core.logging import configure_logging
 
@@ -48,44 +48,39 @@ async def get_asset_test(step_id: str):
     return FileResponse(path, media_type="model/gltf-binary")
 
 
-@router.websocket('/ws')
-async def websocket_endpoint(websocket: WebSocket):
-    # accept incoming connection from unity
-    await websocket.accept()
-    connected_clients.append(websocket)
-    print(f"Unity client must've connected: {len(connected_clients)}")
-    logger.info(f"Unity client connected. Total clients: {len(connected_clients)}")
-    await websocket.send_text(json.dumps({"action": "load_step", "step_id": "step_001"}))
-
-
-    try:
-      # keep listening for msges from unity
-      raw = "" # Initialize raw to an empty string to prevent Pylance warning
-      while True:
-        raw = await websocket.receive_text()
-        data = json.loads(raw)
-        print(f"Data received from unity is {data}")
-        logger.info(f"Data received from Unity: {data}")
-
-
-        # unity sends confirm msg, i.e. send next step
-        if data.get('action') == 'confirm_step':
-          step_id = data.get('step_id')
-          print(f'Worker confirmed step : {step_id}')
-          logger.info(f'Worker confirmed step: {step_id}')
-
-          next_step = 'step_002'
-          await websocket.send_text(json.dumps({'action': 'load_step', 'step_id': next_step}))
-          logger.info(f"Sent 'load_step' for '{next_step}' to client.")
-
-    except WebSocketDisconnect:
-      connected_clients.remove(websocket)
-      print(f"Unity client must've disconnected: {len(connected_clients)}")
-      logger.info(f"Unity client disconnected. Remaining clients: {len(connected_clients)}")
-    except json.JSONDecodeError:
-      logger.error(f"Received invalid JSON from client: {raw}")
-    except Exception as e:
-      logger.exception(f"An unexpected error occurred in websocket: {e}")
+# WebSocket transport — kept for reference, not currently wired to the main Unity client.
+# The active Unity transport is HTTP bridge (Android/Vuzix) via /unity/connect,
+# /unity/heartbeat, /unity/step-completed defined in server_kit_main.py.
+#
+# @router.websocket('/ws')
+# async def websocket_endpoint(websocket: WebSocket):
+#     await websocket.accept()
+#     connected_clients.append(websocket)
+#     print(f"Unity client must've connected: {len(connected_clients)}")
+#     logger.info(f"Unity client connected. Total clients: {len(connected_clients)}")
+#     await websocket.send_text(json.dumps({"action": "load_step", "step_id": "step_001"}))
+#     try:
+#       raw = ""
+#       while True:
+#         raw = await websocket.receive_text()
+#         data = json.loads(raw)
+#         print(f"Data received from unity is {data}")
+#         logger.info(f"Data received from Unity: {data}")
+#         if data.get('action') == 'confirm_step':
+#           step_id = data.get('step_id')
+#           print(f'Worker confirmed step : {step_id}')
+#           logger.info(f'Worker confirmed step: {step_id}')
+#           next_step = 'step_002'
+#           await websocket.send_text(json.dumps({'action': 'load_step', 'step_id': next_step}))
+#           logger.info(f"Sent 'load_step' for '{next_step}' to client.")
+#     except WebSocketDisconnect:
+#       connected_clients.remove(websocket)
+#       print(f"Unity client must've disconnected: {len(connected_clients)}")
+#       logger.info(f"Unity client disconnected. Remaining clients: {len(connected_clients)}")
+#     except json.JSONDecodeError:
+#       logger.error(f"Received invalid JSON from client: {raw}")
+#     except Exception as e:
+#       logger.exception(f"An unexpected error occurred in websocket: {e}")
 
 
   # test func for sending a broadcast to all connected devices.

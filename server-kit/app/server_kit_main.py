@@ -1,7 +1,7 @@
 """FastAPI entrypoint for guidance runtime HTTP and bridge endpoints."""
 
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
+from fastapi import FastAPI, APIRouter
 from fastapi import BackgroundTasks
 from fastapi import HTTPException
 from pydantic import BaseModel
@@ -9,6 +9,7 @@ from fastapi.responses import FileResponse
 from fastapi.responses import JSONResponse
 from fastapi import status
 from pathlib import Path
+import app
 from app.omniverse.router import router as omniverse_router
 from app.unity.router import router as unity_router
 from app.unity.router import connected_clients
@@ -187,14 +188,14 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
   app.state.config = resolved_config
   app.state.logger = logger
   app.include_router(omniverse_router, prefix="/omni", tags=["Omniverse Connection"])
-  app.include_router(unity_router, prefix="/unity", tags=["Unity Connection"])
+  api = APIRouter(tags=["Guidance API"])
 
-  @app.get("/health")
+  @api.get("/health")
   def health() -> dict[str, str]:
     logger.info("health check", session_id="-", step_id="-", event="http.health")
     return {"status": "ok"}
 
-  @app.post("/api/stage:open-smoke")
+  @api.post("/api/stage:open-smoke")
   def stage_open_smoke() -> JSONResponse:
     result = stage_open_service.smoke_open()
     status_code = status.HTTP_200_OK
@@ -213,7 +214,7 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
       },
     )
 
-  @app.post("/session/connect")
+  @app.post("/unity/connect", tags=["Unity"])
   def session_connect(payload: ConnectEnvelope) -> JSONResponse:
     session_id, resumed = session_manager.register_or_resume_session(payload.hello.device_id)
     _set_session_state_with_log(
@@ -251,7 +252,7 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
       }
     )
 
-  @app.post("/session/heartbeat")
+  @app.post("/unity/heartbeat", tags=["Unity"])
   def session_heartbeat(payload: HeartbeatEnvelope) -> JSONResponse:
     session = session_manager.get(payload.heartbeat.session_id)
     if session is None:
@@ -275,7 +276,7 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
     )
     return JSONResponse(content={"ping": {"nonce": f"hb-{payload.heartbeat.client_time_unix_ms}"}})
 
-  @app.post("/session/step-completed")
+  @app.post("/unity/step-completed", tags=["Unity"])
   def session_step_completed(payload: StepCompletedEnvelope) -> JSONResponse:
     completion = payload.step_completed
     session = session_manager.get(completion.session_id)
@@ -341,7 +342,7 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
       }
     )
 
-  @app.get("/api/jobs/{job_id}/manifest")
+  @api.get("/api/jobs/{job_id}/manifest")
   def get_manifest(job_id: str) -> JSONResponse:
     try:
       manifest = manifest_service.get_manifest(job_id)
@@ -372,7 +373,7 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
     logger.info("manifest served", session_id="-", step_id="-", event="http.manifest")
     return JSONResponse(content=payload, headers=headers)
 
-  @app.post("/api/jobs/{job_id}/packages:build", status_code=status.HTTP_202_ACCEPTED)
+  @api.post("/api/jobs/{job_id}/packages:build", status_code=status.HTTP_202_ACCEPTED)
   def build_runtime_packages(job_id: str, background_tasks: BackgroundTasks) -> JSONResponse:
     try:
       manifest_service.get_manifest(job_id)
@@ -402,7 +403,7 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
       },
     )
 
-  @app.get("/api/package-jobs/{run_id}")
+  @api.get("/api/package-jobs/{run_id}")
   def get_package_job(run_id: str) -> JSONResponse:
     record = export_job_service.get(run_id)
     if record is None:
@@ -420,7 +421,7 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
     }
     return JSONResponse(content=payload)
 
-  @app.delete("/api/package-jobs/{run_id}")
+  @api.delete("/api/package-jobs/{run_id}")
   def cancel_package_job(run_id: str) -> JSONResponse:
     record = export_job_service.cancel(run_id)
     if record is None:
@@ -443,13 +444,15 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
       }
     )
 
-  @app.post("/api/package-jobs:cleanup")
+  @api.post("/api/package-jobs:cleanup")
   def cleanup_package_jobs(ttl_seconds: int | None = None) -> JSONResponse:
     retention = ttl_seconds if ttl_seconds is not None else resolved_config.export_job_retention_seconds
     removed = export_job_service.cleanup(retention)
     return JSONResponse(content={"removed": removed, "ttlSeconds": retention})
 
-  @app.get("/api/assets/{asset_version}/{file_name}")
+
+
+  @api.get("/api/assets/{asset_version}/{file_name}")
   def get_asset(asset_version: str, file_name: str) -> FileResponse:
     file_path = asset_root / asset_version / file_name
     if not file_path.exists():
@@ -467,7 +470,9 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
     )
     return FileResponse(file_path, headers=headers)
 
-  @app.get("/api/targets/{target_version}/{file_name}")
+
+# The api to get the Vuforia Target model or send i to be precise since we keep it in the BE.
+  @api.get("/api/targets/{target_version}/{file_name}")
   def get_target(target_version: str, file_name: str) -> FileResponse:
     file_path = target_root / target_version / file_name
     if not file_path.exists():
@@ -485,7 +490,8 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
     )
     return FileResponse(file_path, headers=headers)
 
-  @app.get("/api/jobs/{job_id}/steps")
+# send the specific step for the said target/job_id.
+  @api.get("/api/jobs/{job_id}/steps")
   def get_steps(job_id: str) -> JSONResponse:
     steps = step_repo.get_steps(job_id)
     payload = {
@@ -495,7 +501,9 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
     logger.info("steps served", session_id="-", step_id="-", event="http.steps")
     return JSONResponse(content=payload)
 
-  @app.post("/api/jobs/{job_id}/layers:resolve")
+
+# Takes the job id and breaks it into its animations and layers.
+  @api.post("/api/jobs/{job_id}/layers:resolve")
   def resolve_layers(job_id: str, payload: LayerResolvePayload) -> JSONResponse:
     resolved_steps = layer_stack_resolver.resolve_steps(
       job_id=job_id,
@@ -535,6 +543,7 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
     }
     logger.info("layers resolved", session_id="-", step_id="-", event="http.layers.resolve")
     return JSONResponse(content=response)
+  app.include_router(api)
 
   return app
 

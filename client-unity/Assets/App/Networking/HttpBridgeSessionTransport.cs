@@ -48,7 +48,7 @@ namespace Guidance.Runtime
             };
 
             var json = JsonUtility.ToJson(payload);
-            var url = _baseUrl + "/session/connect";
+            var url = _baseUrl + "/unity/connect";
 
             var request = new UnityWebRequest(url, UnityWebRequest.kHttpVerbPOST)
             {
@@ -102,7 +102,7 @@ namespace Guidance.Runtime
             };
 
             var json = JsonUtility.ToJson(payload);
-            var url = _baseUrl + "/session/heartbeat";
+            var url = _baseUrl + "/unity/heartbeat";
 
             var request = new UnityWebRequest(url, UnityWebRequest.kHttpVerbPOST)
             {
@@ -156,7 +156,7 @@ namespace Guidance.Runtime
             };
 
             var json = JsonUtility.ToJson(payload);
-            var url = _baseUrl + "/session/step-completed";
+            var url = _baseUrl + "/unity/step-completed";
 
             var request = new UnityWebRequest(url, UnityWebRequest.kHttpVerbPOST)
             {
