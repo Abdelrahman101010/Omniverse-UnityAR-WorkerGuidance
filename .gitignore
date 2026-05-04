@@ -52,7 +52,3 @@ server-kit/runtime/export-jobs.json
 # OS
 .DS_Store
 Thumbs.db
-
-
-# test-server
-test-server/
