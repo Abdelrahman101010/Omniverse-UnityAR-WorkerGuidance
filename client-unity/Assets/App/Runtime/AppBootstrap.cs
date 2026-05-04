@@ -8,6 +8,9 @@ using Guidance.V1;
 
 namespace Guidance.Runtime
 {
+    /// <summary>
+    /// Main runtime orchestrator that wires session flow, asset presentation, tracking, and HUD actions.
+    /// </summary>
     public sealed class AppBootstrap : MonoBehaviour
     {
         [SerializeField] private bool useNativeGrpcTransport = true;

@@ -14,12 +14,11 @@ obj/
 *.tmp
 *.cache/
 
-# Unity generated
+# Unity generated (auto-rebuilt)
 client-unity/Library/
-client-unity/Logs/
 client-unity/Temp/
-client-unity/Obj/
-client-unity/UserSettings/
+client-unity/Logs/
+client-unity/obj/
 client-unity/Build/
 # ─── Unity additional ignores ──────────────────────────────────
 client-unity/.utmp/
