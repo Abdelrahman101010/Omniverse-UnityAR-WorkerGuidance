@@ -20,6 +20,7 @@ namespace Guidance.Runtime
 
         private string _pipelineStatus = string.Empty;
         private string _targetStatus = string.Empty;
+        private string _transportMode = string.Empty;
 
         private void Awake()
         {
@@ -64,6 +65,11 @@ namespace Guidance.Runtime
             _targetStatus = status ?? string.Empty;
         }
 
+        public void SetTransportMode(string mode)
+        {
+            _transportMode = mode ?? string.Empty;
+        }
+
         private void OnGUI()
         {
             if (!visible)
@@ -71,8 +77,10 @@ namespace Guidance.Runtime
                 return;
             }
 
-            GUILayout.BeginArea(new Rect(16, 16, 520, 245), GUI.skin.box);
+            GUILayout.BeginArea(new Rect(16, 16, 520, 265), GUI.skin.box);
             GUILayout.Label("Guidance Runtime Status");
+            if (!string.IsNullOrEmpty(_transportMode))
+                GUILayout.Label($"Transport: {_transportMode}");
             GUILayout.Label($"Connection: {_connectionState}");
             GUILayout.Label($"Step State: {_stepState}");
             GUILayout.Label($"Active Step: {_activeStep}");

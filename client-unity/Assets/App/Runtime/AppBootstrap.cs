@@ -4,8 +4,10 @@ using System.Collections;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
-using Guidance.V1;
-
+using System.Collections.Generic;
+#if VUFORIA_ENGINE
+using Vuforia;
+#endif
 namespace Guidance.Runtime
 {
     /// <summary>
@@ -14,13 +16,10 @@ namespace Guidance.Runtime
     public sealed class AppBootstrap : MonoBehaviour
     {
         [SerializeField] private bool useNativeGrpcTransport = true;
-        [SerializeField] private string grpcTarget = "172.20.10.2:50051";
-        [SerializeField] private string httpBridgeBaseUrl = "http://172.20.10.2:8080";
+        [SerializeField] private string grpcTarget = "localhost:50051";
+        [SerializeField] private string httpBridgeBaseUrl = "http://localhost:8080";
         [SerializeField] private string desiredJobId = "demonstrator-26-02-25";
         [SerializeField] private bool enableRuntimeAssetPipeline = true;
-        [SerializeField] private bool useHologramShader = true;
-        [SerializeField] private GameObject fixtureOverlayPrefab;
-        [SerializeField] private VuforiaTrackingBridge vuforiaTrackingBridge;
         [SerializeField] private bool autoConfirmStepAfterAssetReady = false;
         [SerializeField] private float autoConfirmDelaySeconds = 0.5f;
         [SerializeField] private float heartbeatIntervalSeconds = 5f;
@@ -30,6 +29,9 @@ namespace Guidance.Runtime
 
         [SerializeField] private SessionStatusPanel statusPanel;
         [SerializeField] private TrackingDirectionHint trackingDirectionHint;
+        [SerializeField] private Transform modelTargetTransform;
+        [SerializeField] private VuforiaTrackingBridge vuforiaTrackingBridge;
+
 
         private AppRuntimeContext _runtime;
         private StepActivationDto _lastActivation;
@@ -44,12 +46,12 @@ namespace Guidance.Runtime
         private string _lastTargetPayloadPath = string.Empty;
         private string _lastTargetVersion = string.Empty;
         private CancellationTokenSource _loadCancellation;
-        private bool _vuforiaTargetLoaded;
-        private Transform _activeObserverTransform;
+        private readonly List<StepActivationDto> _stepHistory = new List<StepActivationDto>();
+        private string _lastHistoryModelPath = string.Empty;
+
 
         private void Awake()
         {
-            System.AppContext.SetSwitch("System.Net.Http.SocketsHttpHandler.Http2UnencryptedSupport", true);
             _runtime = AppRuntimeContext.CreateDefault(
                 useNativeGrpcTransport: useNativeGrpcTransport,
                 grpcTarget: grpcTarget,
@@ -59,9 +61,7 @@ namespace Guidance.Runtime
             );
 
             if (vuforiaTrackingBridge == null)
-            {
                 vuforiaTrackingBridge = FindFirstObjectByType<VuforiaTrackingBridge>();
-            }
 
             _runtime.StepCoordinator.StateChanged += OnStepStateChanged;
             _runtime.SessionClient.StepActivated += OnSessionStepActivated;
@@ -70,7 +70,6 @@ namespace Guidance.Runtime
 
         private void Start()
         {
-            HologramApplier.Enabled = useHologramShader;
             _runtime.SessionClient.Initialize();
             _runtime.StepCoordinator.Initialize();
             _runtime.SessionClient.Connect();
@@ -85,12 +84,16 @@ namespace Guidance.Runtime
                 statusPanel.SetActiveStep("-", "-");
                 statusPanel.SetInstruction("-");
                 statusPanel.SetWarning(string.Empty);
+                statusPanel.SetTransportMode(useNativeGrpcTransport ? "gRPC :50051" : "HTTP Bridge :8080");
             }
         }
 
         private void Update()
         {
-            if (_runtime == null) return;
+            if (_runtime == null)
+            {
+                return;
+            }
 
             var now = Time.time;
             if (_runtime.SessionClient.ConnectionState == SessionConnectionState.Connected)
@@ -122,18 +125,26 @@ namespace Guidance.Runtime
             }
         }
 
-        private void OnStepStateChanged(StepCoordinatorState previous, StepCoordinatorState current, string reason)
+        private void OnStepStateChanged(
+            StepCoordinatorState previous,
+            StepCoordinatorState current,
+            string reason)
         {
             Debug.Log($"[AppBootstrap] Step state changed {previous} -> {current} ({reason})");
-            if (statusPanel != null) statusPanel.SetStepState(current);
+            if (statusPanel != null)
+            {
+                statusPanel.SetStepState(current);
+            }
         }
 
         private void OnSessionStepActivated(StepActivationDto activation)
         {
+            _runtime.ModelPresenter.ClearActiveModel();
             Debug.Log($"[AppBootstrap] Step activated from session: {activation.JobId}/{activation.StepId}");
             _runtime.StepCoordinator.ActivateStep(activation.JobId, activation.StepId);
             _runtime.TelemetryClient.TrackStepActivated(activation.JobId, activation.StepId, activation.PartId);
             _lastActivation = activation;
+            _stepHistory.Add(activation);
 
             if (statusPanel != null)
             {
@@ -151,7 +162,10 @@ namespace Guidance.Runtime
         private void OnSessionConnectionStateChanged(SessionConnectionState state)
         {
             Debug.Log($"[AppBootstrap] Session connection state: {state}");
-            if (statusPanel != null) statusPanel.SetConnectionState(state);
+            if (statusPanel != null)
+            {
+                statusPanel.SetConnectionState(state);
+            }
 
             if (state == SessionConnectionState.Connected)
             {
@@ -166,7 +180,11 @@ namespace Guidance.Runtime
 
                 if (!string.IsNullOrEmpty(_pendingCompletionJobId) && !string.IsNullOrEmpty(_pendingCompletionStepId))
                 {
-                    _runtime.SessionClient.SendStepCompleted(_pendingCompletionJobId, _pendingCompletionStepId, _pendingCompletionAtUnixMs);
+                    _runtime.SessionClient.SendStepCompleted(
+                        _pendingCompletionJobId,
+                        _pendingCompletionStepId,
+                        _pendingCompletionAtUnixMs
+                    );
                     _pendingCompletionJobId = string.Empty;
                     _pendingCompletionStepId = string.Empty;
                     _pendingCompletionAtUnixMs = 0;
@@ -174,9 +192,15 @@ namespace Guidance.Runtime
             }
         }
 
+        /// <summary>
+        /// Confirms the active step and notifies server progression when connected.
+        /// </summary>
         public void ConfirmActiveStep()
         {
-            if (_lastActivation == null) return;
+            if (_lastActivation == null)
+            {
+                return;
+            }
 
             if (_runtime.SessionClient.ConnectionState != SessionConnectionState.Connected)
             {
@@ -184,32 +208,52 @@ namespace Guidance.Runtime
                 return;
             }
 
-            if (!_runtime.StepCoordinator.ConfirmStepCompleted()) return;
+            if (!_runtime.StepCoordinator.ConfirmStepCompleted())
+            {
+                return;
+            }
 
             var completedAt = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
             _runtime.SessionClient.SendStepCompleted(_lastActivation.JobId, _lastActivation.StepId, completedAt);
-            _runtime.TargetManager.DeactivateTarget();
-            _runtime.ModelPresenter.ClearActiveModel();
-            _lastActivation = null;
+            // _runtime.TargetManager.DeactivateTarget();
+            // _runtime.ModelPresenter.ClearActiveModel();
+            // _lastActivation = null;
 
-            if (statusPanel != null)
-            {
-                statusPanel.SetActiveStep("-", "-");
-                statusPanel.SetInstruction("-");
-            }
+            // if (statusPanel != null)
+            // {
+            //     statusPanel.SetActiveStep("-", "-");
+            //     statusPanel.SetInstruction("-");
+            // }
 
             _isFrozenStepMode = false;
         }
 
+        /// <summary>
+        /// Replays currently active assets without forcing a fresh manifest resolve when possible.
+        /// </summary>
         public void ReplayActiveStep()
         {
-            if (_lastActivation == null) return;
+            if (_lastActivation == null)
+            {
+                return;
+            }
 
             if (!string.IsNullOrEmpty(_lastModelPath) && File.Exists(_lastModelPath))
             {
-                _runtime.TargetManager.ActivateTarget(_lastActivation.TargetId, _lastTargetVersion, _lastTargetPayloadPath);
-                _runtime.ModelPresenter.PresentModel(_lastModelPath, _lastActivation);
-                if (statusPanel != null) statusPanel.SetWarning(string.Empty);
+                _runtime.TargetManager.ActivateTarget(
+                    _lastActivation.TargetId,
+                    _lastTargetVersion,
+                    _lastTargetPayloadPath
+                );
+                _loadCancellation?.Cancel();
+                _loadCancellation?.Dispose();
+                _loadCancellation = new CancellationTokenSource();
+                _ = _runtime.ModelPresenter.PresentModelAsync(_lastModelPath, _lastActivation, _loadCancellation.Token);
+                // _runtime.ModelPresenter.PresentModel(_lastModelPath, _lastActivation);
+                if (statusPanel != null)
+                {
+                    statusPanel.SetWarning(string.Empty);
+                }
                 return;
             }
 
@@ -218,30 +262,56 @@ namespace Guidance.Runtime
 
         public void PreviousStep()
         {
-            if (_lastActivation == null) return;
-
-            if (_runtime.SessionClient.ConnectionState != SessionConnectionState.Connected)
+            // Need at least 2 entries: current + one before it
+            if (_stepHistory.Count < 2)
             {
-                if (statusPanel != null) statusPanel.SetWarning("Previous-Step requires a server connection.");
+                if (statusPanel != null)
+                    statusPanel.SetWarning("No previous step available.");
                 return;
             }
 
-            _runtime.SessionClient.SendUserAction(_lastActivation.JobId, _lastActivation.StepId, UserActionType.Previous);
-            _runtime.TargetManager.DeactivateTarget();
-            _runtime.ModelPresenter.ClearActiveModel();
-            _lastActivation = null;
+            // Remove current step from history, peek at previous
+            _stepHistory.RemoveAt(_stepHistory.Count - 1);
+            var previousActivation = _stepHistory[_stepHistory.Count - 1];
 
-            if (statusPanel != null)
+            // Try loading from cache first
+            var previousFileName = $"part_{previousActivation.PartId}_{previousActivation.AssetVersion?.Substring(7, 8)}.glb";
+            if (_runtime.AssetCache.TryGetCachedFile(previousActivation.AssetVersion, previousFileName, out var cachedPath)
+                && File.Exists(cachedPath))
             {
-                statusPanel.SetActiveStep("-", "-");
-                statusPanel.SetInstruction("-");
-                statusPanel.SetWarning(string.Empty);
+                _runtime.ModelPresenter.ClearActiveModel();
+                _lastActivation = previousActivation;
+                _loadCancellation?.Cancel();
+                _loadCancellation?.Dispose();
+                _loadCancellation = new CancellationTokenSource();
+                _ = _runtime.ModelPresenter.PresentModelAsync(cachedPath, previousActivation, _loadCancellation.Token);
+                if (statusPanel != null)
+                {
+                    statusPanel.SetActiveStep(previousActivation.StepId, previousActivation.PartId);
+                    statusPanel.SetInstruction(previousActivation.DisplayName);
+                    statusPanel.SetWarning(string.Empty);
+                }
+            }
+            else
+            {
+                // Not cached — re-resolve from manifest
+                _lastActivation = previousActivation;
+                StartCoroutine(ResolveAndPresentStepAsset(previousActivation));
+                if (statusPanel != null)
+                {
+                    statusPanel.SetActiveStep(previousActivation.StepId, previousActivation.PartId);
+                    statusPanel.SetInstruction(previousActivation.DisplayName);
+                }
             }
         }
 
+
         public void ShowHelp()
         {
-            if (statusPanel != null) statusPanel.SetWarning("Richte das Geraet auf das Zielbild aus und druecke Confirm/Next nach dem Schritt.");
+            if (statusPanel != null)
+            {
+                statusPanel.SetWarning("Richte das Geraet auf das Zielbild aus und druecke Confirm/Next nach dem Schritt.");
+            }
         }
 
         public void ExportDiagnosticsBundle()
@@ -263,7 +333,10 @@ namespace Guidance.Runtime
 
             var path = _runtime.DiagnosticsExporter.Export(snapshot);
             _runtime.TelemetryClient.TrackFault("DIAGNOSTICS_EXPORT", $"Diagnostics exported: {path}");
-            if (statusPanel != null) statusPanel.SetWarning($"Diagnostics exportiert: {path}");
+            if (statusPanel != null)
+            {
+                statusPanel.SetWarning($"Diagnostics exportiert: {path}");
+            }
         }
 
         private IEnumerator ResolveAndPresentStepAsset(StepActivationDto activation)
@@ -272,7 +345,8 @@ namespace Guidance.Runtime
             string resolveError = null;
 
             yield return _runtime.ManifestClient.ResolveStepAssetWithNext(
-                activation.JobId, activation.StepId,
+                activation.JobId,
+                activation.StepId,
                 onResolved: value => resolvedBundle = value,
                 onError: error => resolveError = error
             );
@@ -281,7 +355,10 @@ namespace Guidance.Runtime
             {
                 _runtime.TelemetryClient.TrackFault("MANIFEST_RESOLVE", resolveError);
                 _runtime.StepCoordinator.RegisterFault(resolveError);
-                if (statusPanel != null) statusPanel.SetWarning(resolveError);
+                if (statusPanel != null)
+                {
+                    statusPanel.SetWarning(resolveError);
+                }
                 yield break;
             }
 
@@ -289,21 +366,33 @@ namespace Guidance.Runtime
             {
                 _runtime.TelemetryClient.TrackFault("MANIFEST_RESOLVE", "Step asset resolve returned null");
                 _runtime.StepCoordinator.RegisterFault("Step asset resolve returned null");
-                if (statusPanel != null) statusPanel.SetWarning("Step asset resolve returned null");
+                if (statusPanel != null)
+                {
+                    statusPanel.SetWarning("Step asset resolve returned null");
+                }
                 yield break;
             }
 
             var resolved = resolvedBundle.Current;
+
             var fileName = ExtractFileName(resolved.GlbUrl, activation.StepId);
-            if (_runtime.AssetCache.TryGetCachedFile(resolved.AssetVersion, fileName, out _))
+            var glbCached = _runtime.AssetCache.TryGetCachedFile(resolved.AssetVersion, fileName, out _);
+            if (glbCached)
             {
                 _runtime.TelemetryClient.TrackAssetCacheHit(resolved.AssetVersion, fileName);
+                statusPanel?.SetPipelineStatus("loading from cache...");
+            }
+            else
+            {
+                statusPanel?.SetPipelineStatus("downloading from server...");
             }
 
             string modelPath = null;
             string downloadError = null;
             yield return _runtime.AssetCache.GetOrDownloadFile(
-                resolved.GlbUrl, resolved.AssetVersion, fileName,
+                resolved.GlbUrl,
+                resolved.AssetVersion,
+                fileName,
                 onReady: path => modelPath = path,
                 onError: error => downloadError = error
             );
@@ -312,20 +401,28 @@ namespace Guidance.Runtime
             {
                 _runtime.TelemetryClient.TrackFault("ASSET_DOWNLOAD", downloadError);
                 _runtime.StepCoordinator.RegisterFault(downloadError);
-                if (statusPanel != null) statusPanel.SetWarning(downloadError);
+                if (statusPanel != null)
+                {
+                    statusPanel.SetWarning(downloadError);
+                }
                 yield break;
             }
 
             _runtime.TelemetryClient.TrackAssetDownloaded(resolved.AssetVersion, fileName);
 
-            var targetDatFileName = ExtractFileName(resolved.TargetUrl, activation.StepId, defaultExtension: "dat");
-            string targetDatPath = null;
+            var targetFileName = ExtractFileName(resolved.TargetUrl, activation.StepId, defaultExtension: "dat");
+            string targetPayloadPath = null;
             string targetXmlPath = null;
             string targetPayloadError = null;
 
+            var targetCached = _runtime.TargetPayloadCache.TryGetCachedFile(resolved.TargetVersion, targetFileName, out _);
+            statusPanel?.SetTargetStatus(targetCached ? "loading from cache..." : "downloading from server...");
+
             yield return _runtime.TargetPayloadCache.GetOrDownloadTargetPair(
-                resolved.TargetUrl, resolved.TargetVersion, targetDatFileName,
-                onReady: (xml, dat) => { targetXmlPath = xml; targetDatPath = dat; },
+                resolved.TargetUrl,
+                resolved.TargetVersion,
+                targetFileName,
+                onReady: (xml, dat) => { targetXmlPath = xml; targetPayloadPath = dat; },
                 onError: error => targetPayloadError = error
             );
 
@@ -333,61 +430,48 @@ namespace Guidance.Runtime
             {
                 _runtime.TelemetryClient.TrackFault("TARGET_DOWNLOAD", targetPayloadError);
                 _runtime.StepCoordinator.RegisterFault(targetPayloadError);
-                if (statusPanel != null) statusPanel.SetWarning(targetPayloadError);
+                statusPanel?.SetWarning(targetPayloadError);
                 yield break;
             }
 
-            _runtime.TargetManager.ActivateTarget(activation.TargetId, resolved.TargetVersion, targetDatPath);
-
-            // ====================================================================
-            // VUFORIA LOADING BLOCK (Fixed target injection)
-            // ====================================================================
-            if (!_vuforiaTargetLoaded && string.Equals(activation.AnchorType, "model-target", StringComparison.OrdinalIgnoreCase))
-            {
-                string vuforiaError = null;
+            statusPanel?.SetTargetStatus(targetCached ? "ready (from cache)" : "ready (from server)");
+            _runtime.TargetManager.ActivateTarget(activation.TargetId, resolved.TargetVersion, targetPayloadPath);
 
 #if VUFORIA_ENGINE
+            if (!string.IsNullOrEmpty(targetPayloadPath))
+            {
+                statusPanel?.SetTargetStatus("loading into Vuforia...");
                 yield return VuforiaModelTargetLoader.LoadModelTargetDatabaseAsync(
-                    targetDatPath,
-                    activation.TargetId, // <--- Passing the dynamic target name here!
+                    targetPayloadPath,
+                    targetNameFallback: activation.TargetId,
                     onLoaded: observer =>
                     {
-                        if (vuforiaTrackingBridge != null)
+                        if (observer != null)
                         {
-                            vuforiaTrackingBridge.AssignObserver(observer);
+                            statusPanel?.SetTargetStatus("ACTIVE in Vuforia (from FastAPI)");
+                            vuforiaTrackingBridge?.AssignObserver(observer);
                         }
-                        _activeObserverTransform = observer != null ? observer.transform : null;
-                        _vuforiaTargetLoaded = true;
-
-                        if (observer != null && fixtureOverlayPrefab != null)
+                        else
                         {
-                            var overlay = observer.gameObject.AddComponent<FixtureOverlay>();
-                            overlay.Initialize(fixtureOverlayPrefab, observer);
+                            statusPanel?.SetTargetStatus("ERROR: Vuforia returned null observer");
                         }
                     },
-                    onError: err => vuforiaError = err
+                    onError: err =>
+                    {
+                        statusPanel?.SetTargetStatus($"ERROR: {err}");
+                        Debug.LogWarning($"[AppBootstrap] Vuforia load failed: {err}");
+                    }
                 );
-#else
-                Debug.LogWarning("Vuforia Engine is not enabled. Skipping Model Target load.");
-                _vuforiaTargetLoaded = true; 
+            }
 #endif
 
-                if (!string.IsNullOrEmpty(vuforiaError))
-                {
-                    _runtime.TelemetryClient.TrackFault("VUFORIA_LOAD", vuforiaError);
-                    _runtime.StepCoordinator.RegisterFault(vuforiaError);
-                    if (statusPanel != null) statusPanel.SetWarning(vuforiaError);
-                    yield break;
-                }
-            }
-            // ====================================================================
-
+            // Cancel any previous in-flight model load and start a fresh async load.
             _loadCancellation?.Cancel();
             _loadCancellation?.Dispose();
             _loadCancellation = new CancellationTokenSource();
             var loadToken = _loadCancellation.Token;
 
-            Task loadTask = _runtime.ModelPresenter.PresentModelAsync(modelPath, activation, loadToken, _activeObserverTransform);
+            Task loadTask = _runtime.ModelPresenter.PresentModelAsync(modelPath, activation, loadToken);
             yield return new WaitUntil(() => loadTask.IsCompleted);
 
             if (loadTask.IsFaulted)
@@ -398,9 +482,9 @@ namespace Guidance.Runtime
                 if (statusPanel != null) statusPanel.SetWarning(err);
                 yield break;
             }
-
             _lastModelPath = modelPath ?? string.Empty;
-            _lastTargetPayloadPath = targetDatPath ?? string.Empty;
+            statusPanel?.SetPipelineStatus("ready");
+            _lastTargetPayloadPath = targetPayloadPath ?? string.Empty;
             _lastTargetVersion = resolved.TargetVersion ?? string.Empty;
 
             if (resolvedBundle.Next != null)
@@ -422,49 +506,77 @@ namespace Guidance.Runtime
 
         private static string ExtractFileName(string url, string stepId, string defaultExtension)
         {
-            if (string.IsNullOrEmpty(url)) return $"step_{stepId}.{defaultExtension}";
+            if (string.IsNullOrEmpty(url))
+            {
+                return $"step_{stepId}.{defaultExtension}";
+            }
+
             if (Uri.TryCreate(url, UriKind.Absolute, out var uri))
             {
                 var absolute = Path.GetFileName(uri.AbsolutePath);
-                if (!string.IsNullOrEmpty(absolute)) return absolute;
+                if (!string.IsNullOrEmpty(absolute))
+                {
+                    return absolute;
+                }
             }
+
             var simple = Path.GetFileName(url);
             return string.IsNullOrEmpty(simple) ? $"step_{stepId}.{defaultExtension}" : simple;
         }
 
+        // Hook for future Vuforia target callbacks (3DModel-target v1).
+        /// <summary>
+        /// Updates runtime tracking state from Vuforia or test injection callbacks.
+        /// </summary>
         public void OnTargetTrackingUpdated(Vector3 observedPosition, Quaternion observedRotation, bool trackingAcquired)
         {
             _runtime.TargetManager.UpdateTrackingPose(observedPosition, observedRotation, trackingAcquired);
+
             if (trackingAcquired)
             {
                 _runtime.StepCoordinator.BeginTracking();
                 return;
             }
+
             _runtime.StepCoordinator.NotifyTrackingLost();
         }
 
         private void UpdateTrackingHint()
         {
-            if (trackingDirectionHint == null || _runtime == null) return;
+            if (trackingDirectionHint == null || _runtime == null)
+            {
+                return;
+            }
 
-            var hasHint = !string.IsNullOrEmpty(_runtime.TargetManager.ActiveTargetId) && !_runtime.TargetManager.IsTrackingAcquired;
+            var hasHint = !string.IsNullOrEmpty(_runtime.TargetManager.ActiveTargetId)
+                && !_runtime.TargetManager.IsTrackingAcquired;
             var angle = _runtime.TargetManager.GetTrackingHintSignedAngleDegrees(Camera.main);
             trackingDirectionHint.SetHint(angle, hasHint);
         }
 
         private IEnumerator PrefetchNextStepAssets(ResolvedStepAsset next, string currentStepId)
         {
-            if (next == null) yield break;
+            if (next == null)
+            {
+                yield break;
+            }
 
             var nextGlbFile = ExtractFileName(next.GlbUrl, currentStepId + "_next", "glb");
             if (!_runtime.AssetCache.TryGetCachedFile(next.AssetVersion, nextGlbFile, out _))
             {
                 string prefetchError = null;
                 yield return _runtime.AssetCache.GetOrDownloadFile(
-                    next.GlbUrl, next.AssetVersion, nextGlbFile,
-                    onReady: _ => { }, onError: error => prefetchError = error
+                    next.GlbUrl,
+                    next.AssetVersion,
+                    nextGlbFile,
+                    onReady: _ => { },
+                    onError: error => prefetchError = error
                 );
-                if (!string.IsNullOrEmpty(prefetchError)) _runtime.TelemetryClient.TrackFault("PREFETCH_NEXT_ASSET", prefetchError);
+
+                if (!string.IsNullOrEmpty(prefetchError))
+                {
+                    _runtime.TelemetryClient.TrackFault("PREFETCH_NEXT_ASSET", prefetchError);
+                }
             }
 
             var nextTargetFile = ExtractFileName(next.TargetUrl, currentStepId + "_next", "dat");
@@ -472,44 +584,35 @@ namespace Guidance.Runtime
             {
                 string prefetchTargetError = null;
                 yield return _runtime.TargetPayloadCache.GetOrDownloadFile(
-                    next.TargetUrl, next.TargetVersion, nextTargetFile,
-                    onReady: _ => { }, onError: error => prefetchTargetError = error
+                    next.TargetUrl,
+                    next.TargetVersion,
+                    nextTargetFile,
+                    onReady: _ => { },
+                    onError: error => prefetchTargetError = error
                 );
-                if (!string.IsNullOrEmpty(prefetchTargetError)) _runtime.TelemetryClient.TrackFault("PREFETCH_NEXT_TARGET", prefetchTargetError);
+
+                if (!string.IsNullOrEmpty(prefetchTargetError))
+                {
+                    _runtime.TelemetryClient.TrackFault("PREFETCH_NEXT_TARGET", prefetchTargetError);
+                }
             }
         }
 
         private void EnterFrozenStepMode()
         {
             _isFrozenStepMode = true;
+
             if (_lastActivation != null)
             {
                 _pendingCompletionJobId = _lastActivation.JobId;
                 _pendingCompletionStepId = _lastActivation.StepId;
                 _pendingCompletionAtUnixMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
             }
-            if (statusPanel != null) statusPanel.SetWarning("Netzwerk unterbrochen: Schritt eingefroren bis Reconnect.");
-        }
 
-        private void OnDestroy()
-        {
-            Debug.Log("[AppBootstrap] Shutting down session safely...");
-            if (_runtime != null && _runtime.SessionClient != null)
+            if (statusPanel != null)
             {
-                try
-                {
-                    _runtime.SessionClient.Disconnect();
-                }
-                catch (System.Exception e)
-                {
-                    Debug.LogError($"Error during shutdown: {e.Message}");
-                }
+                statusPanel.SetWarning("Netzwerk unterbrochen: Schritt eingefroren bis Reconnect.");
             }
-        }
-
-        private void OnApplicationQuit()
-        {
-            OnDestroy();
         }
     }
 }
