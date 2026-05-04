@@ -1,8 +1,10 @@
 {
-  "sessionCount": 2,
+  "sessionCount": 4,
   "deviceIndex": {
     "2172c81f89ec3683c47da564d8ae41bf519bb056": "session-1",
-    "external-server-001": "session-2"
+    "external-server-001": "session-2",
+    "fe15dd16b71ce0d3d67d8fb5f2d91a99": "session-3",
+    "37bddadfa0180c90a40d1b83a6a3486610accd0a": "session-4"
   },
   "sessions": {
     "session-1": {
@@ -12,6 +14,14 @@
     "session-2": {
       "deviceId": "external-server-001",
       "state": "Idle"
+    },
+    "session-3": {
+      "deviceId": "fe15dd16b71ce0d3d67d8fb5f2d91a99",
+      "state": "StepReady"
+    },
+    "session-4": {
+      "deviceId": "37bddadfa0180c90a40d1b83a6a3486610accd0a",
+      "state": "StepReady"
     }
   }
 }
