@@ -48,6 +48,7 @@ namespace Guidance.Runtime
         private CancellationTokenSource _loadCancellation;
         private readonly List<StepActivationDto> _stepHistory = new List<StepActivationDto>();
         private string _lastHistoryModelPath = string.Empty;
+        private Transform _activeObserverTransform;
 
 
         private void Awake()
@@ -449,6 +450,7 @@ namespace Guidance.Runtime
                         if (observer != null)
                         {
                             statusPanel?.SetTargetStatus("ACTIVE in Vuforia (from FastAPI)");
+                            _activeObserverTransform = observer.transform;
                             vuforiaTrackingBridge?.AssignObserver(observer);
                         }
                         else
@@ -471,7 +473,7 @@ namespace Guidance.Runtime
             _loadCancellation = new CancellationTokenSource();
             var loadToken = _loadCancellation.Token;
 
-            Task loadTask = _runtime.ModelPresenter.PresentModelAsync(modelPath, activation, loadToken);
+            Task loadTask = _runtime.ModelPresenter.PresentModelAsync(modelPath, activation, loadToken, _activeObserverTransform);
             yield return new WaitUntil(() => loadTask.IsCompleted);
 
             if (loadTask.IsFaulted)
