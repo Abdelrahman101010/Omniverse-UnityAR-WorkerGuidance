@@ -1,0 +1,37 @@
+namespace Guidance.Runtime
+{
+    /// <summary>
+    /// Lightweight activation payload projected from server events for runtime use.
+    /// </summary>
+    public sealed class StepActivationDto
+    {
+        public string JobId { get; }
+        public string StepId { get; }
+        public string PartId { get; }
+        public string DisplayName { get; }
+        public string AssetVersion { get; }
+        public string TargetId { get; }
+        public string TargetVersion { get; }
+        public string AnchorType { get; }
+
+        public StepActivationDto(
+            string jobId,
+            string stepId,
+            string partId,
+            string displayName,
+            string assetVersion = "",
+            string targetId = "",
+            string targetVersion = "",
+            string anchorType = "")
+        {
+            JobId = jobId;
+            StepId = stepId;
+            PartId = partId;
+            DisplayName = displayName;
+            AssetVersion = assetVersion;
+            TargetId = targetId;
+            TargetVersion = targetVersion;
+            AnchorType = anchorType;
+        }
+    }
+}
