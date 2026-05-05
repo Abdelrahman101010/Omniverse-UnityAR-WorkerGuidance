@@ -44,6 +44,7 @@ namespace Guidance.Editor
             Path.Combine("Assets", "App", "Tests"),
             Path.Combine("Assets", "Plugins", "Android"),
             Path.Combine("Assets", "Packages"),
+            Path.Combine("Assets", "NuGet"),     // NuGet editor infrastructure, not assembly data
         };
 
         // Specific filenames that are Unity build-system files, never assembly data.

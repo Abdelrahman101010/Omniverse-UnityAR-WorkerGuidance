@@ -168,7 +168,6 @@
     <None Include="Assets\Packages\System.IO.Pipelines.6.0.3\lib\netstandard2.0\System.IO.Pipelines.dll" />
     <None Include="Assets\Packages\System.IO.Pipelines.6.0.3\useSharedDesignerContext.txt" />
     <None Include="Assets\Packages\System.IO.Pipelines.6.0.3\THIRD-PARTY-NOTICES.TXT" />
-    <None Include="Assets\StreamingAssets\Vuforia\Fixture_detectors_1.xml" />
     <None Include="Assets\Packages\Microsoft.Extensions.Logging.Abstractions.8.0.0\analyzers\dotnet\roslyn3.11\cs\ru\Microsoft.Extensions.Logging.Generators.resources.dll" />
     <None Include="Assets\Packages\Microsoft.Extensions.Logging.Abstractions.8.0.0\analyzers\dotnet\roslyn3.11\cs\Microsoft.Extensions.Logging.Generators.dll" />
     <None Include="Assets\Packages\Microsoft.Extensions.Logging.Abstractions.8.0.0\analyzers\dotnet\roslyn4.4\cs\tr\Microsoft.Extensions.Logging.Generators.resources.dll" />

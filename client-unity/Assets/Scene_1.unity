@@ -278,9 +278,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: aabcb7c317dbd174cbe36d024149135c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  useNativeGrpcTransport: 0
-  grpcTarget: localhost:50051
-  httpBridgeBaseUrl: http://localhost:8080
+  useNativeGrpcTransport: 1
+  grpcTarget: 141.43.110.83:50051
+  httpBridgeBaseUrl: 141.43.110.83:8080
   desiredJobId: demonstrator-26-02-25
   enableRuntimeAssetPipeline: 1
   useHologramShader: 1

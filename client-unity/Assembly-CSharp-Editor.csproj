@@ -84,7 +84,6 @@
   <ItemGroup>
     <None Include="Assets\NuGet\Editor\NuGetForUnity.PluginAPI.xml" />
     <None Include="Assets\NuGet\Editor\NuGetForUnity.PluginAPI.dll" />
-    <None Include="Assets\Editor\Vuforia\Fixture_detectors_1\authoringinfo.xml" />
     <None Include="Assets\NuGet\Editor\NugetForUnity.dll" />
   </ItemGroup>
   <ItemGroup>

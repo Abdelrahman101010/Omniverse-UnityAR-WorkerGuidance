@@ -15,7 +15,7 @@ namespace Guidance.Runtime
     {
         [SerializeField] private bool useNativeGrpcTransport = true;
         [SerializeField] private string grpcTarget = "172.20.10.2:50051";
-        [SerializeField] private string httpBridgeBaseUrl = "http://172.20.10.2:8080";
+        [SerializeField] private string httpBridgeBaseUrl = "172.20.10.2:8080";
         [SerializeField] private string desiredJobId = "demonstrator-26-02-25";
         [SerializeField] private bool enableRuntimeAssetPipeline = true;
         [SerializeField] private bool useHologramShader = true;
