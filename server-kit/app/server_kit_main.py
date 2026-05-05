@@ -157,6 +157,7 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
       "asset_version": step.asset_version,
       "target_id": step.target_id,
       "target_version": step.target_version,
+      "anchor_type": step.anchor_type,
     }
 
   def _set_session_state_with_log(session_id: str, next_state: SessionState, reason: str, step_id: str = "-") -> None:

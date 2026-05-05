@@ -1,5 +1,6 @@
 using System;
 using System.Text;
+using Guidance.V1;
 using UnityEngine;
 using UnityEngine.Networking;
 
@@ -180,6 +181,11 @@ namespace Guidance.Runtime
             };
         }
 
+        public void SendUserAction(string jobId, string stepId, UserActionType action)
+        {
+            Debug.LogWarning($"[HttpBridgeSessionTransport] SendUserAction({action}) not supported on HTTP bridge; use gRPC transport.");
+        }
+
         private void ProcessConnectResponse(string responseJson)
         {
             if (string.IsNullOrWhiteSpace(responseJson))
@@ -224,7 +230,8 @@ namespace Guidance.Runtime
                         message.step_activated.display_name,
                         message.step_activated.asset_version,
                         message.step_activated.target_id,
-                        message.step_activated.target_version
+                        message.step_activated.target_version,
+                        message.step_activated.anchor_type
                     )
                 );
             }
@@ -293,7 +300,8 @@ namespace Guidance.Runtime
                         message.step_activated.display_name,
                         message.step_activated.asset_version,
                         message.step_activated.target_id,
-                        message.step_activated.target_version
+                        message.step_activated.target_version,
+                        message.step_activated.anchor_type
                     )
                 );
                 return;
@@ -361,6 +369,7 @@ namespace Guidance.Runtime
             public string asset_version;
             public string target_id;
             public string target_version;
+            public string anchor_type;
         }
 
         [Serializable]
