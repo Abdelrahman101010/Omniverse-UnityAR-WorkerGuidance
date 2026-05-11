@@ -12,10 +12,11 @@
 This repository contains the first implementation slice for an AR worker guidance system.
 
 ## Components
-- `server-kit/`: Omniverse Kit server for step resolution, export, gRPC, and HTTP services.
-- `client-unity/`: Unity 6 client runtime for session orchestration, model loading, and tracking.
+- `server-kit/`: Python server providing FastAPI HTTP REST (port 8080) and gRPC services (port 50051) for step resolution, asset delivery, and export pipeline.
+- `client-unity/`: Unity 6 AR client runtime for session orchestration, model loading, and Vuforia tracking.
 - `proto/`: Shared protobuf contracts used by server and client.
-- `shared/`: Shared schemas, sample payloads, and fixtures.
+- `shared/`: Shared schemas, sample payloads, and asset fixtures.
+- `tools/packaging/`: Export scripts for converting Omniverse USD animations to GLB packages.
 
 ## Omniverse Assembly Scene (Reference Example)
 The current section documents an example layer-stack pattern to demonstrate runtime behavior.

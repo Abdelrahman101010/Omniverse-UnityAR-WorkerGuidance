@@ -1,0 +1,66 @@
+{
+  "jobId": "pu-segment-assembly",
+  "workflowVersion": "1.0.0",
+  "steps": [
+    {
+      "stepId": "step-001",
+      "partId": "plate_bottom_01",
+      "assetVersion": "sha256_76408aa9ff1ef0cc",
+      "glbFile": "part_plate_bottom_01_76408aa9.glb",
+      "stepJsonFile": "step-001.json",
+      "targetVersion": "v1.0.0",
+      "targetFile": "Fixture_detectors_1.xml",
+      "compression": "NONE"
+    },
+    {
+      "stepId": "step-002",
+      "partId": "cores_001_002",
+      "assetVersion": "sha256_b33562b5e715f4dd",
+      "glbFile": "part_cores_001_002_b33562b5.glb",
+      "stepJsonFile": "step-002.json",
+      "targetVersion": "v1.0.0",
+      "targetFile": "Fixture_detectors_1.xml",
+      "compression": "NONE"
+    },
+    {
+      "stepId": "step-003",
+      "partId": "left_unit_phase_03",
+      "assetVersion": "sha256_41324de07ba479c5",
+      "glbFile": "part_left_unit_phase_03_41324de0.glb",
+      "stepJsonFile": "step-003.json",
+      "targetVersion": "v1.0.0",
+      "targetFile": "Fixture_detectors_1.xml",
+      "compression": "NONE"
+    },
+    {
+      "stepId": "step-004",
+      "partId": "right_unit_phase_03",
+      "assetVersion": "sha256_e1ae3f584304cc9c",
+      "glbFile": "part_right_unit_phase_03_e1ae3f58.glb",
+      "stepJsonFile": "step-004.json",
+      "targetVersion": "v1.0.0",
+      "targetFile": "Fixture_detectors_1.xml",
+      "compression": "NONE"
+    },
+    {
+      "stepId": "step-005",
+      "partId": "plate_top_02",
+      "assetVersion": "sha256_1ddbaf3d0a12fd60",
+      "glbFile": "part_plate_top_02_1ddbaf3d.glb",
+      "stepJsonFile": "step-005.json",
+      "targetVersion": "v1.0.0",
+      "targetFile": "Fixture_detectors_1.xml",
+      "compression": "NONE"
+    },
+    {
+      "stepId": "step-006",
+      "partId": "schrauben_top_02_002",
+      "assetVersion": "sha256_ba59cb4c2ffb54b7",
+      "glbFile": "part_schrauben_top_02_002_ba59cb4c.glb",
+      "stepJsonFile": "step-006.json",
+      "targetVersion": "v1.0.0",
+      "targetFile": "Fixture_detectors_1.xml",
+      "compression": "NONE"
+    }
+  ]
+}

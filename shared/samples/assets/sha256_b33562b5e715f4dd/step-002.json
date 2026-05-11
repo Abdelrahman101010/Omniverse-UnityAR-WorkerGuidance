@@ -1,0 +1,17 @@
+{
+  "stepId": "step-002",
+  "partId": "cores_001_002",
+  "displayName": "CORES_001 CORES_002",
+  "sequenceIndex": 2,
+  "instructionsShort": "Place Part_CORES_001 CORES_002",
+  "safetyNotes": [],
+  "expectedDurationSec": 30,
+  "anchor": {
+    "type": "model-target",
+    "targetId": "Fixture_detectors_1_model_target",
+    "targetVersion": "v1.0.0"
+  },
+  "assetVersion": "sha256_b33562b5e715f4dd",
+  "compression": "NONE",
+  "glbFile": "part_cores_001_002_b33562b5.glb"
+}

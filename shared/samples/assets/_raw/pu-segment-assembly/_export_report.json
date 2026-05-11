@@ -1,0 +1,60 @@
+{
+  "job_id": "pu-segment-assembly",
+  "nucleus_base": "omniverse://141.43.76.21/Projects/DIREKT/Project%20Assembly/Source/Animation_PU_Segment",
+  "parts": [
+    {
+      "step_id": "step-001",
+      "part_id": "plate_bottom_01",
+      "display_name": "PLATE_BOTTOM_01_001",
+      "sequence_index": 1,
+      "glb_file": "plate_bottom_01.glb",
+      "ok": true,
+      "detail": "D:\\Users\\Abdul\\Omniverse-UnityAR-WorkerGuidance\\Omniverse-UnityAR-WorkerGuidance\\shared\\samples\\assets\\_raw\\pu-segment-assembly\\plate_bottom_01.glb"
+    },
+    {
+      "step_id": "step-002",
+      "part_id": "cores_001_002",
+      "display_name": "CORES_001 CORES_002",
+      "sequence_index": 2,
+      "glb_file": "cores_001_002.glb",
+      "ok": true,
+      "detail": "D:\\Users\\Abdul\\Omniverse-UnityAR-WorkerGuidance\\Omniverse-UnityAR-WorkerGuidance\\shared\\samples\\assets\\_raw\\pu-segment-assembly\\cores_001_002.glb"
+    },
+    {
+      "step_id": "step-003",
+      "part_id": "left_unit_phase_03",
+      "display_name": "LEFT_UNIT_PHASE_03_001",
+      "sequence_index": 3,
+      "glb_file": "left_unit_phase_03.glb",
+      "ok": true,
+      "detail": "D:\\Users\\Abdul\\Omniverse-UnityAR-WorkerGuidance\\Omniverse-UnityAR-WorkerGuidance\\shared\\samples\\assets\\_raw\\pu-segment-assembly\\left_unit_phase_03.glb"
+    },
+    {
+      "step_id": "step-004",
+      "part_id": "right_unit_phase_03",
+      "display_name": "RIGHT_UNIT_PHASE_03_001",
+      "sequence_index": 4,
+      "glb_file": "right_unit_phase_03.glb",
+      "ok": true,
+      "detail": "D:\\Users\\Abdul\\Omniverse-UnityAR-WorkerGuidance\\Omniverse-UnityAR-WorkerGuidance\\shared\\samples\\assets\\_raw\\pu-segment-assembly\\right_unit_phase_03.glb"
+    },
+    {
+      "step_id": "step-005",
+      "part_id": "plate_top_02",
+      "display_name": "PLATE_TOP_02_002",
+      "sequence_index": 5,
+      "glb_file": "plate_top_02.glb",
+      "ok": true,
+      "detail": "D:\\Users\\Abdul\\Omniverse-UnityAR-WorkerGuidance\\Omniverse-UnityAR-WorkerGuidance\\shared\\samples\\assets\\_raw\\pu-segment-assembly\\plate_top_02.glb"
+    },
+    {
+      "step_id": "step-006",
+      "part_id": "schrauben_top_02_002",
+      "display_name": "Schrauben_TOP_02_002",
+      "sequence_index": 6,
+      "glb_file": "schrauben_top_02_002.glb",
+      "ok": true,
+      "detail": "D:\\Users\\Abdul\\Omniverse-UnityAR-WorkerGuidance\\Omniverse-UnityAR-WorkerGuidance\\shared\\samples\\assets\\_raw\\pu-segment-assembly\\schrauben_top_02_002.glb"
+    }
+  ]
+}

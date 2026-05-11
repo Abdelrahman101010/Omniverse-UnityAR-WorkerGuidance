@@ -25,6 +25,9 @@ namespace Guidance.Runtime
         [SerializeField] private float reconnectMaxIntervalSeconds = 20f;
         [SerializeField] private float reconnectBackoffMultiplier = 1.8f;
 
+        [SerializeField] private Vector3 modelPositionOffset = Vector3.zero;
+        [SerializeField] private float animationSpeed = 1f;
+
         [SerializeField] private SessionStatusPanel statusPanel;
         [SerializeField] private TrackingDirectionHint trackingDirectionHint;
 
@@ -205,7 +208,7 @@ namespace Guidance.Runtime
             if (!string.IsNullOrEmpty(_lastModelPath) && File.Exists(_lastModelPath))
             {
                 _runtime.TargetManager.ActivateTarget(_lastActivation.TargetId, _lastTargetVersion, _lastTargetPayloadPath);
-                _runtime.ModelPresenter.PresentModel(_lastModelPath, _lastActivation);
+                _runtime.ModelPresenter.PresentModel(_lastModelPath, _lastActivation, modelPositionOffset, animationSpeed);
                 if (statusPanel != null) statusPanel.SetWarning(string.Empty);
                 return;
             }
@@ -384,7 +387,7 @@ namespace Guidance.Runtime
             _loadCancellation = new CancellationTokenSource();
             var loadToken = _loadCancellation.Token;
 
-            Task loadTask = _runtime.ModelPresenter.PresentModelAsync(modelPath, activation, loadToken, _activeObserverTransform);
+            Task loadTask = _runtime.ModelPresenter.PresentModelAsync(modelPath, activation, loadToken, _activeObserverTransform, modelPositionOffset, animationSpeed);
             yield return new WaitUntil(() => loadTask.IsCompleted);
 
             if (loadTask.IsFaulted)

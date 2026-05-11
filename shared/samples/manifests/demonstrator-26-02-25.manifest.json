@@ -1,0 +1,76 @@
+{
+  "jobId": "demonstrator-26-02-25",
+  "workflowVersion": "1.0.0",
+  "steps": [
+    {
+      "stepId": "step-001",
+      "partId": "plate_bottom_01",
+      "assetVersion": "sha256_ebddc7dcd5206b27",
+      "glbFile": "part_plate_bottom_01_ebddc7dc.glb",
+      "stepJsonFile": "step-001.json",
+      "targetVersion": "v1.0.0",
+      "targetFile": "Fixture_detectors_1.xml",
+      "compression": "NONE"
+    },
+    {
+      "stepId": "step-002",
+      "partId": "cores_001_002",
+      "assetVersion": "sha256_84622c3206362c03",
+      "glbFile": "part_cores_001_002_84622c32.glb",
+      "stepJsonFile": "step-002.json",
+      "targetVersion": "v1.0.0",
+      "targetFile": "Fixture_detectors_1.xml",
+      "compression": "NONE"
+    },
+    {
+      "stepId": "step-003",
+      "partId": "left_unit_phase_03",
+      "assetVersion": "sha256_ac66be1ae652ed65",
+      "glbFile": "part_left_unit_phase_03_ac66be1a.glb",
+      "stepJsonFile": "step-003.json",
+      "targetVersion": "v1.0.0",
+      "targetFile": "Fixture_detectors_1.xml",
+      "compression": "NONE"
+    },
+    {
+      "stepId": "step-004",
+      "partId": "right_unit_phase_03",
+      "assetVersion": "sha256_ecd908410f23c1dc",
+      "glbFile": "part_right_unit_phase_03_ecd90841.glb",
+      "stepJsonFile": "step-004.json",
+      "targetVersion": "v1.0.0",
+      "targetFile": "Fixture_detectors_1.xml",
+      "compression": "NONE"
+    },
+    {
+      "stepId": "step-005",
+      "partId": "plate_top_02",
+      "assetVersion": "sha256_22d2c0a4ea57804b",
+      "glbFile": "part_plate_top_02_22d2c0a4.glb",
+      "stepJsonFile": "step-005.json",
+      "targetVersion": "v1.0.0",
+      "targetFile": "Fixture_detectors_1.xml",
+      "compression": "NONE"
+    },
+    {
+      "stepId": "step-006",
+      "partId": "frame_ring_03_004",
+      "assetVersion": "sha256_e9449d55bfc5a29d",
+      "glbFile": "part_frame_ring_03_004_e9449d55.glb",
+      "stepJsonFile": "step-006.json",
+      "targetVersion": "v1.0.0",
+      "targetFile": "Fixture_detectors_1.xml",
+      "compression": "NONE"
+    },
+    {
+      "stepId": "step-007",
+      "partId": "frame_ring_03_multi",
+      "assetVersion": "sha256_4789181aabc340ce",
+      "glbFile": "part_frame_ring_03_multi_4789181a.glb",
+      "stepJsonFile": "step-007.json",
+      "targetVersion": "v1.0.0",
+      "targetFile": "Fixture_detectors_1.xml",
+      "compression": "NONE"
+    }
+  ]
+}

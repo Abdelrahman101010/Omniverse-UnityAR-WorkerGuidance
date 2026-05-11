@@ -28,7 +28,7 @@ namespace Guidance.Runtime
         /// Synchronous model presentation kept for replay paths. Production step activations
         /// should use <see cref="PresentModelAsync"/> to avoid blocking the main thread.
         /// </summary>
-        public void PresentModel(string modelFilePath, StepActivationDto activation)
+        public void PresentModel(string modelFilePath, StepActivationDto activation, Vector3 positionOffset = default, float animationSpeed = 1f)
         {
             ClearActiveModel();
 
@@ -39,6 +39,7 @@ namespace Guidance.Runtime
             }
 
             _activeModelRoot = new GameObject($"Model_{activation.PartId}_{activation.StepId}");
+            _activeModelRoot.transform.localPosition = positionOffset;
 
             IModelLoader selectedLoader = null;
             foreach (var loader in _loaders)
@@ -62,6 +63,7 @@ namespace Guidance.Runtime
                 error => Debug.LogWarning($"[ModelPresenter] Loader error: {error}")
             );
 
+            ApplyAnimationSpeed(_activeModelRoot, animationSpeed);
             HologramApplier.Apply(_activeModelRoot.transform);
             Debug.Log($"[ModelPresenter] Presented model for step {activation.StepId} from {modelFilePath}");
         }
@@ -79,7 +81,9 @@ namespace Guidance.Runtime
             string modelFilePath,
             StepActivationDto activation,
             CancellationToken ct,
-            Transform parentTransform = null)
+            Transform parentTransform = null,
+            Vector3 positionOffset = default,
+            float animationSpeed = 1f)
         {
             ClearActiveModel();
 
@@ -94,7 +98,7 @@ namespace Guidance.Runtime
             if (parentTransform != null)
             {
                 _activeModelRoot.transform.SetParent(parentTransform, worldPositionStays: false);
-                _activeModelRoot.transform.localPosition = Vector3.zero;
+                _activeModelRoot.transform.localPosition = positionOffset;
                 _activeModelRoot.transform.localRotation = Quaternion.identity;
                 _activeModelRoot.transform.localScale    = Vector3.one;
             }
@@ -118,6 +122,7 @@ namespace Guidance.Runtime
             try
             {
                 await selectedLoader.LoadModelAsync(modelFilePath, _activeModelRoot.transform, ct);
+                ApplyAnimationSpeed(_activeModelRoot, animationSpeed);
                 HologramApplier.Apply(_activeModelRoot.transform);
                 Debug.Log($"[ModelPresenter] Async-loaded model for step {activation.StepId} from {modelFilePath}");
             }
@@ -126,6 +131,16 @@ namespace Guidance.Runtime
                 Debug.Log($"[ModelPresenter] Load cancelled for step {activation.StepId}");
                 ClearActiveModel();
             }
+        }
+
+        private static void ApplyAnimationSpeed(GameObject root, float speed)
+        {
+            foreach (var anim in root.GetComponentsInChildren<Animation>(includeInactive: true))
+                foreach (AnimationState state in anim)
+                    state.speed = speed;
+
+            foreach (var animator in root.GetComponentsInChildren<Animator>(includeInactive: true))
+                animator.speed = speed;
         }
 
         public void ClearActiveModel()

@@ -5,28 +5,18 @@
 ```
 ┌─────────────────────────┐         gRPC (port 50051)          ┌──────────────────────┐
 │  Python Server-Kit      │ ◄──────────────────────────────── │  Unity AR Client     │
-│  (FastAPI + gRPC)       │                                    │  (HoloLens / phone)  │
-│                         │ ─── HTTP REST (port 8080) ───────► │                      │
-│  shared/samples/        │                                    │  persistentDataPath/ │
-│    manifests/           │         gRPC (port 50051)          │    guidance-cache/   │
-│    assets/              │ ◄──────────────────────────────── │    guidance-target-  │
-│    targets/             │                                    │    cache/            │
-└─────────────────────────┘                                    └──────────────────────┘
-           ▲
-           │  (optional: test server replaces Python server)
-           │
-┌─────────────────────────┐
-│  ASP.NET Test Server    │
-│  (port 5000)            │
-│  - Web Admin UI         │
-│  - gRPC session service │
-│  - gRPC asset transfer  │
+│  FastAPI  (port 8080)   │                                    │  (VUZIX M4000 / AR)  │
+│  gRPC     (port 50051)  │ ─── HTTP REST (port 8080) ───────► │                      │
+│                         │                                    │  persistentDataPath/ │
+│  shared/samples/        │         gRPC (port 50051)          │    guidance-cache/   │
+│    manifests/           │ ◄──────────────────────────────── │    guidance-target-  │
+│    assets/              │                                    │    cache/            │
+│    targets/             │                                    └──────────────────────┘
 └─────────────────────────┘
 ```
 
-Both the Python server-kit and the ASP.NET test server implement the same gRPC proto
-contract defined in [`proto/guidance.proto`](../proto/guidance.proto). The Unity client
-connects to whichever server is running.
+The gRPC proto contract is defined in [`proto/guidance.proto`](../proto/guidance.proto).
+The Unity client connects to the Python server-kit via gRPC (primary) or HTTP REST (fallback).
 
 ---
 
@@ -88,34 +78,23 @@ inside the project's `Assets/` tree.
 | `StepDefinitionRepository` | `step_definition_repository.py` | Reads `step-definitions.yaml` |
 | `DracoCodec` | `draco_codec.py` | Optional Draco mesh compression for GLB chunks |
 
-### ASP.NET Test Server
-
-| Component | File | Responsibility |
-|-----------|------|----------------|
-| `Program.cs` | `test-server/Program.cs` | Kestrel + gRPC + Razor Pages wiring |
-| `GuidanceSessionServiceImpl` | `Services/GuidanceSessionServiceImpl.cs` | gRPC duplex session |
-| `AssetTransferServiceImpl` | `Services/AssetTransferServiceImpl.cs` | gRPC asset chunk streaming |
-| `JobStore` | `Storage/JobStore.cs` | In-memory job store; notifies waiting gRPC streams on job activation |
-| `FileAssetStore` | `Storage/FileAssetStore.cs` | Saves uploaded files to `data/` directories |
-| `Index` page | `Pages/Index.cshtml` | Job list + "Notify Unity" button |
-| `Jobs/Submit` page | `Pages/Jobs/Submit.cshtml` | Multi-step job creation form with file uploads |
-
 ---
 
 ## 4. Runtime Data Flow
 
 ```
-Operator (web browser)
+Operator / Export Pipeline
   │
   ▼
-test-server /Jobs/Submit (POST)
-  │  ① Upload GLB + Vuforia target files
-  │  ② Write manifest JSON
-  │  ③ Insert into JobStore
-  │  ④ JobStore.SetActiveJob() → notifies waiting gRPC streams
+FastAPI  POST /api/jobs/{jobId}/packages:build
+  │  ① Runs export pipeline: Omniverse USD → GLB + Vuforia target files
+  │  ② Writes manifest JSON to shared/samples/manifests/
+  │  ③ Writes versioned GLB files to shared/samples/assets/
+  │  ④ Writes versioned Vuforia target to shared/samples/targets/
   ▼
-GuidanceSessionServiceImpl.Connect() (gRPC server stream)
-  │  ⑤ Sends StepActivated { job_id, step_id, asset_version, target_version, … }
+gRPC GuidanceSessionService.Connect() — duplex stream (port 50051)
+  │  ⑤ Operator activates step → server sends StepActivated
+  │     { job_id, step_id, asset_version, target_version, … }
   ▼
 Unity AR Client — GrpcSessionTransport.ReadLoopAsync()
   │  ⑥ Fires SessionClient.StepActivated event
