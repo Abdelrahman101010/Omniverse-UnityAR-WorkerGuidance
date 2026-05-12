@@ -45,6 +45,9 @@ client-unity/Assets/Editor/Migration/com.ptc.vuforia.engine-11.4.4.tgz.meta
 # Server runtime state — recreated on each run, not source
 server-kit/runtime/sessions.json
 server-kit/runtime/export-jobs.json
+# Generated/exported sample assets — ignore everything inside, keep the folder itself
+shared/samples/assets/*
+!shared/samples/assets/.gitkeep
 # OS
 .DS_Store
 Thumbs.db
