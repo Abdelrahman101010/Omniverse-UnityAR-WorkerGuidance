@@ -279,8 +279,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   useNativeGrpcTransport: 1
-  grpcTarget: 141.43.110.83:50051
-  httpBridgeBaseUrl: 141.43.110.83:8080
+  grpcTarget: 10.20.54.62:50051
+  httpBridgeBaseUrl: 10.20.54.62:8080
   desiredJobId: demonstrator-26-02-25
   enableRuntimeAssetPipeline: 1
   useHologramShader: 1
