@@ -1,0 +1,17 @@
+{
+  "stepId": "step-003",
+  "partId": "left_unit_phase_03",
+  "displayName": "LEFT_UNIT_PHASE_03_001",
+  "sequenceIndex": 3,
+  "instructionsShort": "Place Part_LEFT_UNIT_PHASE_03_001",
+  "safetyNotes": [],
+  "expectedDurationSec": 30,
+  "anchor": {
+    "type": "model-target",
+    "targetId": "Fixture_detectors_12_model_target",
+    "targetVersion": "v1.0.0"
+  },
+  "assetVersion": "sha256_5db6c3b7adc0b3f3",
+  "compression": "NONE",
+  "glbFile": "part_left_unit_phase_03_5db6c3b7.glb"
+}

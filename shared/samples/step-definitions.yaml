@@ -1,9 +1,9 @@
 jobs:
-  - jobId: demonstrator-26-02-25
+  - jobId: pu-segment-assembly
     workflowVersion: "1.0.0"
     timelineProfile:
       startStep: 0
-      endStep: 700
+      endStep: 600
       fps: 30
     steps:
       - stepId: step-001
@@ -12,7 +12,7 @@ jobs:
         sourcePrimPath: /World
         animationName: plate_bottom_01_anim
         anchorType: model-target
-        targetId: Fixture_detectors_1_model_target
+        targetId: Fixture_detectors_12_model_target
         targetVersion: "v1.0.0"
         assetVersion: pending
         instructionsShort: "Place Part_PLATE_BOTTOM_01_001"
@@ -33,7 +33,7 @@ jobs:
         sourcePrimPath: /World
         animationName: cores_001_002_anim
         anchorType: model-target
-        targetId: Fixture_detectors_1_model_target
+        targetId: Fixture_detectors_12_model_target
         targetVersion: "v1.0.0"
         assetVersion: pending
         instructionsShort: "Place Part_CORES_001 CORES_002"
@@ -54,7 +54,7 @@ jobs:
         sourcePrimPath: /World
         animationName: left_unit_phase_03_anim
         anchorType: model-target
-        targetId: Fixture_detectors_1_model_target
+        targetId: Fixture_detectors_12_model_target
         targetVersion: "v1.0.0"
         assetVersion: pending
         instructionsShort: "Place Part_LEFT_UNIT_PHASE_03_001"
@@ -75,7 +75,7 @@ jobs:
         sourcePrimPath: /World
         animationName: right_unit_phase_03_anim
         anchorType: model-target
-        targetId: Fixture_detectors_1_model_target
+        targetId: Fixture_detectors_12_model_target
         targetVersion: "v1.0.0"
         assetVersion: pending
         instructionsShort: "Place Part_RIGHT_UNIT_PHASE_03_001"
@@ -96,7 +96,7 @@ jobs:
         sourcePrimPath: /World
         animationName: plate_top_02_anim
         anchorType: model-target
-        targetId: Fixture_detectors_1_model_target
+        targetId: Fixture_detectors_12_model_target
         targetVersion: "v1.0.0"
         assetVersion: pending
         instructionsShort: "Place Part_PLATE_TOP_02_002"
@@ -112,42 +112,21 @@ jobs:
         startOffset: [0.0, 0.0, 0.0]
         targetPosition: [0.0, 0.0, 0.0]
       - stepId: step-006
-        partId: frame_ring_03_004
-        displayName: "TestFrameRing03_004"
+        partId: schrauben_top_02_002
+        displayName: "Schrauben_TOP_02_002"
         sourcePrimPath: /World
-        animationName: frame_ring_03_004_anim
+        animationName: schrauben_top_02_002_anim
         anchorType: model-target
-        targetId: Fixture_detectors_1_model_target
+        targetId: Fixture_detectors_12_model_target
         targetVersion: "v1.0.0"
         assetVersion: pending
-        instructionsShort: "Place Part_TestFrameRing03_004"
+        instructionsShort: "Place Part_Schrauben_TOP_02_002"
         safetyNotes: []
         expectedDurationSec: 30
         sequenceIndex: 6
         animationStartStep: 500
         animationEndStep: 600
         keepVisibleUntilStep: 600
-        activePrimPath: /World
-        animationLayerRole: animation
-        targetLayerRole: target-position
-        startOffset: [0.0, 0.0, 0.0]
-        targetPosition: [0.0, 0.0, 0.0]
-      - stepId: step-007
-        partId: frame_ring_03_multi
-        displayName: "TestFrameRing03_003-005-006-007-010-011"
-        sourcePrimPath: /World
-        animationName: frame_ring_03_multi_anim
-        anchorType: model-target
-        targetId: Fixture_detectors_1_model_target
-        targetVersion: "v1.0.0"
-        assetVersion: pending
-        instructionsShort: "Place Part_TestFrameRing03_003-005-006-007-010-011"
-        safetyNotes: []
-        expectedDurationSec: 30
-        sequenceIndex: 7
-        animationStartStep: 600
-        animationEndStep: 700
-        keepVisibleUntilStep: 700
         activePrimPath: /World
         animationLayerRole: animation
         targetLayerRole: target-position

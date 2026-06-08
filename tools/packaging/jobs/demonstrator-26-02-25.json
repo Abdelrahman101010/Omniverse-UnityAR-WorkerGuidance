@@ -1,0 +1,13 @@
+{
+  "usd_name": "Demonstrator 26.02.25",
+  "nucleus_base": "omniverse://141.43.76.21/Projects/DIREKT/Omniverse%20Tests/Animation%20Februar%2025",
+  "parts": [
+    { "step_id": "step-001", "part_id": "plate_bottom_01",    "display_name": "PLATE_BOTTOM_01_001",                     "usd_basename": "PLATE_BOTTOM_01_001" },
+    { "step_id": "step-002", "part_id": "cores_001_002",      "display_name": "CORES_001 CORES_002",                     "usd_basename": "CORES_001 CORES_002" },
+    { "step_id": "step-003", "part_id": "left_unit_phase_03", "display_name": "LEFT_UNIT_PHASE_03_001",                  "usd_basename": "LEFT_UNIT_PHASE_03_001" },
+    { "step_id": "step-004", "part_id": "right_unit_phase_03","display_name": "RIGHT_UNIT_PHASE_03_001",                  "usd_basename": "RIGHT_UNIT_PHASE_03_001" },
+    { "step_id": "step-005", "part_id": "plate_top_02",       "display_name": "PLATE_TOP_02_002",                        "usd_basename": "PLATE_TOP_02_002" },
+    { "step_id": "step-006", "part_id": "frame_ring_03_004",  "display_name": "TestFrameRing03_004",                     "usd_basename": "TestFrameRing03_004" },
+    { "step_id": "step-007", "part_id": "frame_ring_03_multi","display_name": "TestFrameRing03_003-005-006-007-010-011",  "usd_basename": "TestFrameRing03_003-005-006-007-010-011" }
+  ]
+}

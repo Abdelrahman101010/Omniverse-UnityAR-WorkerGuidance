@@ -10,7 +10,11 @@ Runs AFTER `export_glbs_from_usd.py` has produced per-part GLBs. This script:
   6. Verifies Vuforia Model Target files are in place under shared/samples/targets
 
 Run from the repo root with venv active:
-    python tools\\packaging\\automate_job.py --job-id Fixture_detectors_1-26-02-25
+    python tools\\packaging\\automate_job.py --job-id demonstrator-26-02-25
+    python tools\\packaging\\automate_job.py --job-id pu-segment-assembly
+
+The --job-id must match the JOB_CONFIG_NAME set in export_glbs_from_usd.py,
+which is also the filename of the config under tools/packaging/jobs/.
 """
 
 from __future__ import annotations
@@ -41,10 +45,10 @@ class TargetSpec:
 #   shared/samples/targets/<target_version>/<dat_filename>
 # The Unity client loads both before starting the session.
 DEFAULT_TARGET = TargetSpec(
-    target_id="Fixture_detectors_1_model_target",
+    target_id="Fixture_detectors_12_model_target",
     target_version="v1.0.0",
-    xml_filename="Fixture_detectors_1.xml",
-    dat_filename="Fixture_detectors_1.dat",
+    xml_filename="Fixture_detectors_12.xml",
+    dat_filename="Fixture_detectors_12.dat",
 )
 
 WORKFLOW_VERSION = "1.0.0"
@@ -53,7 +57,7 @@ TIMELINE_FPS = 30
 
 def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(description="Automate job packaging for Unity AR client.")
-    p.add_argument("--job-id", required=True, help="demonstrator-26-02-25")
+    p.add_argument("--job-id", required=True, help="PU_Segment_Assembly")
     p.add_argument("--target-version", default=DEFAULT_TARGET.target_version)
     p.add_argument("--target-xml", default=DEFAULT_TARGET.xml_filename)
     p.add_argument("--target-dat", default=DEFAULT_TARGET.dat_filename)
@@ -84,13 +88,10 @@ def verify_target_files(target: TargetSpec) -> None:
     print(f"[target] Found {xml.name} and {dat.name} under {target.target_version}")
 
 
-def stage_source_assets(job_id: str, report: dict[str, Any], target: TargetSpec) -> tuple[list[dict[str, Any]], Path]:
-    """Copies each raw GLB into a pre-hash staging area and writes a per-step JSON."""
+def prepare_source_assets(job_id: str, report: dict[str, Any], target: TargetSpec) -> list[dict[str, Any]]:
+    """Copies each raw GLB and writes a per-step JSON directly into the asset root."""
     raw_dir = REPO_ROOT / "shared" / "samples" / "assets" / "_raw" / job_id
-    stage_root = REPO_ROOT / "shared" / "samples" / "assets" / "_staging" / job_id
-    if stage_root.exists():
-        shutil.rmtree(stage_root)
-    stage_root.mkdir(parents=True, exist_ok=True)
+    asset_root = REPO_ROOT / "shared" / "samples" / "assets"
 
     steps: list[dict[str, Any]] = []
     for part in report["parts"]:
@@ -98,12 +99,13 @@ def stage_source_assets(job_id: str, report: dict[str, Any], target: TargetSpec)
             sys.exit(f"Part {part['part_id']} failed to export; fix that first.")
 
         source_glb = raw_dir / part["glb_file"]
-        step_dir = stage_root / part["part_id"]
+        step_dir = asset_root / part["part_id"]
+        if step_dir.exists():
+            shutil.rmtree(step_dir)
         step_dir.mkdir(parents=True, exist_ok=True)
 
-        staged_glb_name = f"{part['part_id']}.glb"
-        staged_glb = step_dir / staged_glb_name
-        shutil.copyfile(source_glb, staged_glb)
+        glb_name = f"{part['part_id']}.glb"
+        shutil.copyfile(source_glb, step_dir / glb_name)
 
         step_json_name = f"{part['step_id']}.json"
         step_json_payload = {
@@ -130,11 +132,12 @@ def stage_source_assets(job_id: str, report: dict[str, Any], target: TargetSpec)
             "display_name": part["display_name"],
             "sequence_index": part["sequence_index"],
             "asset_version": part["part_id"],   # placeholder, replaced by hasher
-            "glb_file": staged_glb_name,
+            "glb_file": glb_name,
             "step_json_file": step_json_name,
         })
 
-    return steps, stage_root
+    print(f"[assets] Prepared {len(steps)} source packages in {asset_root}")
+    return steps
 
 
 def write_source_manifest(job_id: str, steps: list[dict[str, Any]], target: TargetSpec) -> Path:
@@ -213,22 +216,14 @@ def write_step_definitions_yaml(job_id: str, steps: list[dict[str, Any]], target
     return path
 
 
-def move_staged_to_asset_root(job_id: str, steps: list[dict[str, Any]]) -> None:
-    """Moves staged GLB+JSON into shared/samples/assets/<asset_version> folders
-    using the placeholder asset_version (part_id) used by the source manifest.
-    build_runtime_packages.py then re-hashes and produces the final versioned
-    layout + final manifest.
-    """
-    stage_root = REPO_ROOT / "shared" / "samples" / "assets" / "_staging" / job_id
+def cleanup_intermediate_assets(steps: list[dict[str, Any]]) -> None:
+    """Removes the temporary <part_id> folders once the final versioned packages are built."""
     asset_root = REPO_ROOT / "shared" / "samples" / "assets"
-
     for s in steps:
-        src = stage_root / s["part_id"]
-        dst = asset_root / s["asset_version"]
-        if dst.exists():
-            shutil.rmtree(dst)
-        shutil.copytree(src, dst)
-    print(f"[stage] Copied staged steps into {asset_root}")
+        interim = asset_root / s["part_id"]
+        if interim.exists():
+            shutil.rmtree(interim)
+    print("[cleanup] Removed intermediate asset folders")
 
 
 def run_build_runtime_packages(job_id: str) -> None:
@@ -256,11 +251,11 @@ def main() -> None:
     if report["job_id"] != args.job_id:
         sys.exit(f"Report job_id ({report['job_id']}) != --job-id ({args.job_id})")
 
-    steps, _ = stage_source_assets(args.job_id, report, target)
+    steps = prepare_source_assets(args.job_id, report, target)
     write_source_manifest(args.job_id, steps, target)
     write_step_definitions_yaml(args.job_id, steps, target)
-    move_staged_to_asset_root(args.job_id, steps)
     run_build_runtime_packages(args.job_id)
+    cleanup_intermediate_assets(steps)
 
     print("\n=== Pipeline complete ===")
     print(f"Unity can now request job: {args.job_id}")

@@ -1,0 +1,17 @@
+{
+  "stepId": "step-001",
+  "partId": "plate_bottom_01",
+  "displayName": "PLATE_BOTTOM_01_001",
+  "sequenceIndex": 1,
+  "instructionsShort": "Place Part_PLATE_BOTTOM_01_001",
+  "safetyNotes": [],
+  "expectedDurationSec": 30,
+  "anchor": {
+    "type": "model-target",
+    "targetId": "Fixture_detectors_1_model_target",
+    "targetVersion": "v1.0.0"
+  },
+  "assetVersion": "sha256_76408aa9ff1ef0cc",
+  "compression": "NONE",
+  "glbFile": "part_plate_bottom_01_76408aa9.glb"
+}

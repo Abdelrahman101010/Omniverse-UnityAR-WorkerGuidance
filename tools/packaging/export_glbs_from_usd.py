@@ -27,10 +27,25 @@ from pathlib import Path
 from typing import Any
 
 # --- CONFIGURATION ---------------------------------------------------------
+# To switch jobs, change JOB_CONFIG_NAME to the filename (without .json) of
+# the config you want under tools/packaging/jobs/.
+#
+# Examples:
+#   JOB_CONFIG_NAME = "demonstrator-26-02-25"
+#   JOB_CONFIG_NAME = "pu-segment-assembly"
 
-JOB_ID = "Fixture_detectors_1-26-02-25"
-NUCLEUS_BASE = "omniverse://141.43.76.21/Projects/DIREKT/Omniverse%20Tests/Animation%20Februar%2025"
+JOB_CONFIG_NAME = "demonstrator-26-02-25"
+
 REPO_ROOT = Path(r"D:\Users\Abdul\Omniverse-UnityAR-WorkerGuidance\Omniverse-UnityAR-WorkerGuidance")
+
+# --- LOAD JOB CONFIG -------------------------------------------------------
+
+_config_path = REPO_ROOT / "tools" / "packaging" / "jobs" / f"{JOB_CONFIG_NAME}.json"
+_config = json.loads(_config_path.read_text(encoding="utf-8"))
+
+USD_NAME    = _config["usd_name"]
+JOB_ID      = USD_NAME.lower().replace(" ", "-").replace(".", "-").replace("_", "-")
+NUCLEUS_BASE = _config["nucleus_base"]
 
 
 @dataclass(frozen=True)
@@ -43,13 +58,14 @@ class PartSpec:
 
 
 PARTS: list[PartSpec] = [
-    PartSpec("step-001", "plate_bottom_01",     "PLATE_BOTTOM_01_001",                              "PLATE_BOTTOM_01_001",                              1),
-    PartSpec("step-002", "cores_001_002",       "CORES_001 CORES_002",                              "CORES_001 CORES_002",                              2),
-    PartSpec("step-003", "left_unit_phase_03",  "LEFT_UNIT_PHASE_03_001",                           "LEFT_UNIT_PHASE_03_001",                           3),
-    PartSpec("step-004", "right_unit_phase_03", "RIGHT_UNIT_PHASE_03_001",                          "RIGHT_UNIT_PHASE_03_001",                          4),
-    PartSpec("step-005", "plate_top_02",        "PLATE_TOP_02_002",                                 "PLATE_TOP_02_002",                                 5),
-    PartSpec("step-006", "frame_ring_03_004",   "TestFrameRing03_004",                              "TestFrameRing03_004",                              6),
-    PartSpec("step-007", "frame_ring_03_multi", "TestFrameRing03_003-005-006-007-010-011",          "TestFrameRing03_003-005-006-007-010-011",          7),
+    PartSpec(
+        step_id=p["step_id"],
+        part_id=p["part_id"],
+        display_name=p["display_name"],
+        usd_basename=p["usd_basename"],
+        sequence_index=i + 1,
+    )
+    for i, p in enumerate(_config["parts"])
 ]
 
 # glTFast-friendly settings: disable materials, lights, cameras. Keep animations.
@@ -101,6 +117,18 @@ def _apply_converter_settings(context: Any) -> None:
             print(f"[warn] AssetConverterContext has no '{key}', skipping")
 
 
+async def _wait_for_stage_ready(ctx: Any, timeout: float = 15.0) -> bool:
+    """Polls until the USD context reports the stage is fully OPENED."""
+    interval = 0.25
+    elapsed = 0.0
+    while elapsed < timeout:
+        if ctx.get_stage_state() == omni.usd.StageState.OPENED:
+            return True
+        await asyncio.sleep(interval)
+        elapsed += interval
+    return False
+
+
 async def export_part_glb(part: PartSpec, output_dir: Path) -> tuple[bool, str]:
     part_url = f"{NUCLEUS_BASE}/{_encode_url(part.usd_basename)}.usd"
     output_glb = output_dir / f"{part.part_id}.glb"
@@ -110,6 +138,10 @@ async def export_part_glb(part: PartSpec, output_dir: Path) -> tuple[bool, str]:
     opened = await ctx.open_stage_async(part_url)
     if not opened:
         return False, f"open_stage_async returned False for {part_url}"
+
+    print(f"[{part.step_id}] Waiting for stage to be fully loaded...")
+    if not await _wait_for_stage_ready(ctx, timeout=15.0):
+        return False, "Stage did not reach OPENED state within 60 s — Nucleus may be slow or the file path is wrong"
 
     tmp_dir = Path(tempfile.mkdtemp(prefix="guidance_flat_"))
     flat_usd = tmp_dir / "flat.usd"
